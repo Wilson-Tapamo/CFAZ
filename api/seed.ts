@@ -1,10 +1,9 @@
 /**
  * Seed API - Initialize database with default admin user
- * Call once after deploying: POST /api/seed
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from '../src/db/index';
-import { users } from '../src/db/schema';
+import { getDb } from '../db/index.js';
+import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 

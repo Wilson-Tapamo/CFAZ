@@ -2,9 +2,9 @@
  * Students API - CRUD operations
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from '../src/db/index';
-import { students, enrollments } from '../src/db/schema';
-import { eq, desc, like, sql } from 'drizzle-orm';
+import { getDb } from '../db/index.js';
+import { students, enrollments } from '../db/schema.js';
+import { eq, desc } from 'drizzle-orm';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,7 +16,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const db = getDb();
 
   try {
-    // GET - List students or get single student
     if (req.method === 'GET') {
       const { id, search, academicYear } = req.query;
 
@@ -24,7 +23,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const [student] = await db.select().from(students).where(eq(students.id, Number(id))).limit(1);
         if (!student) return res.status(404).json({ error: 'Élève non trouvé' });
 
-        // Get enrollments for this student
         const studentEnrollments = await db.select().from(enrollments)
           .where(eq(enrollments.studentId, Number(id)))
           .orderBy(desc(enrollments.createdAt));
@@ -32,7 +30,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ student, enrollments: studentEnrollments });
       }
 
-      // List all students with optional search
       let query = db.select({
         student: students,
         enrollment: enrollments,
@@ -41,8 +38,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .orderBy(desc(students.createdAt));
 
       const results = await query;
-
-      // Group by student, attach latest enrollment
       const studentMap = new Map();
       for (const row of results) {
         if (!studentMap.has(row.student.id)) {
@@ -52,7 +47,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let studentList = Array.from(studentMap.values());
 
-      // Filter by search if provided
       if (search && typeof search === 'string') {
         const s = search.toLowerCase();
         studentList = studentList.filter((st: any) =>
@@ -62,7 +56,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
       }
 
-      // Filter by academic year
       if (academicYear && typeof academicYear === 'string') {
         studentList = studentList.filter((st: any) =>
           st.enrollment?.academicYear === academicYear
@@ -72,10 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ students: studentList, total: studentList.length });
     }
 
-    // POST - Create new student
     if (req.method === 'POST') {
       const data = req.body;
-
       const [newStudent] = await db.insert(students).values({
         fullName: data.fullName,
         dateOfBirth: data.dateOfBirth,
@@ -103,15 +94,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         yearsOfPractice: data.yearsOfPractice ? parseInt(data.yearsOfPractice) : null,
         otherSports: data.otherSports,
       }).returning();
-
       return res.status(201).json({ student: newStudent });
     }
 
-    // PUT - Update student
     if (req.method === 'PUT') {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'ID requis' });
-
       const data = req.body;
       const [updated] = await db.update(students)
         .set({
@@ -123,7 +111,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
         .where(eq(students.id, Number(id)))
         .returning();
-
       return res.status(200).json({ student: updated });
     }
 
