@@ -26,7 +26,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(academicEvaluations.createdAt));
 
-      // Fetch grades for each evaluation (could be optimized with a join)
       const evalsWithGrades = await Promise.all(results.map(async (ev) => {
         const evaluationGrades = await db.select().from(grades).where(eq(grades.evaluationId, ev.id));
         return { ...ev, grades: evaluationGrades };
@@ -36,29 +35,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const { studentId, enrollmentId, sequence, academicYear, behaviorComment, grades: gradesData } = req.body;
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const { studentId, enrollmentId, sequence, academicYear, behaviorComment, grades: gradesData } = body;
+
+      if (!studentId || !enrollmentId || !sequence) {
+        return res.status(400).json({ error: 'Données manquantes (studentId, enrollmentId ou sequence)' });
+      }
+
+      console.log('Creating evaluation for student:', studentId);
 
       // 1. Create the evaluation header
       const [evaluation] = await db.insert(academicEvaluations).values({
-        studentId,
-        enrollmentId,
+        studentId: Number(studentId),
+        enrollmentId: Number(enrollmentId),
         sequence,
-        academicYear,
-        behaviorComment,
+        academicYear: academicYear || '2025-2026',
+        behaviorComment: behaviorComment || '',
       }).returning();
+
+      if (!evaluation) {
+        throw new Error("Échec de la création de l'en-tête d'évaluation");
+      }
 
       // 2. Create the grades entries
       if (gradesData && Array.isArray(gradesData) && gradesData.length > 0) {
         const gradesToInsert = gradesData.map((g: any) => ({
           evaluationId: evaluation.id,
           subject: g.subject,
-          score: parseFloat(g.score),
-          coefficient: parseInt(g.coefficient || '1'),
+          score: parseFloat(String(g.score).replace(',', '.')), // Handle comma as decimal separator
+          coefficient: parseInt(String(g.coefficient || '1')),
         }));
+        
         await db.insert(grades).values(gradesToInsert);
       }
 
-      return res.status(201).json({ evaluation });
+      return res.status(201).json({ evaluation, success: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

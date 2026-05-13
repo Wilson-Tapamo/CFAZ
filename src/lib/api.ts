@@ -131,6 +131,29 @@ export const api = {
     delete: (id: number) =>
       request<{ deleted: boolean }>(`/documents?id=${id}`, { method: 'DELETE' }),
   },
+
+  // ─── Evaluations ────────────────────────────────────────
+  evaluations: {
+    list: (params: { studentId?: number; enrollmentId?: number }) => {
+      const query = new URLSearchParams();
+      if (params.studentId) query.set('studentId', String(params.studentId));
+      if (params.enrollmentId) query.set('enrollmentId', String(params.enrollmentId));
+      return request<{ evaluations: any[] }>(`/academic-evaluations?${query}`);
+    },
+
+    create: (data: {
+      studentId: number;
+      enrollmentId: number;
+      sequence: string;
+      academicYear: string;
+      behaviorComment?: string;
+      grades: { subject: string; score: number | string; coefficient: number | string }[];
+    }) =>
+      request<{ evaluation: any }>('/academic-evaluations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────

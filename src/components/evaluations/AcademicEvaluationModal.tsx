@@ -52,16 +52,13 @@ export default function AcademicEvaluationModal({ student, enrollment, onClose, 
     setSaving(true);
     setError('');
     try {
-      await api.fetch('/api/academic-evaluations', {
-        method: 'POST',
-        body: JSON.stringify({
-          studentId: student.id,
-          enrollmentId: enrollment.id,
-          sequence,
-          academicYear: enrollment.academicYear || getCurrentAcademicYear(),
-          behaviorComment: behavior,
-          grades: grades
-        })
+      await api.evaluations.create({
+        studentId: student.id,
+        enrollmentId: enrollment.id,
+        sequence,
+        academicYear: enrollment.academicYear || getCurrentAcademicYear(),
+        behaviorComment: behavior,
+        grades: grades
       });
       setSuccess(true);
       setTimeout(() => { onSuccess(); onClose(); }, 2000);
