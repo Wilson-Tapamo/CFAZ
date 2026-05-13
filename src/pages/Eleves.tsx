@@ -1,350 +1,311 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  MapPin, 
-  Calendar, 
-  Activity,
-  GraduationCap,
-  Trophy,
-  Wallet,
-  Phone,
-  Mail,
-  User as UserIcon,
-  ChevronRight,
-  Users
+  Search, Filter, MoreHorizontal, User, MapPin, Phone, Calendar, 
+  ChevronRight, X, Loader2, Trophy, BookOpen, Download, UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  PolarRadiusAxis, 
-  Radar, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid
-} from 'recharts';
+import { api } from '@/lib/api';
 
-const students = [
-  { id: 'S001', name: 'Albert Moukandjo', age: 14, category: 'U15', status: 'interne', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Albert' },
-  { id: 'S002', name: 'Benjamin Toko', age: 15, category: 'U15', status: 'externe', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Benjamin' },
-  { id: 'S003', name: 'Claude Onguene', age: 13, category: 'U13', status: 'interne', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Claude' },
-  { id: 'S004', name: 'David Eto\'o', age: 16, category: 'U17', status: 'interne', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David' },
-];
-
-const athleticData = [
-  { subject: 'Vitesse', A: 85, fullMark: 100 },
-  { subject: 'Endurance', A: 92, fullMark: 100 },
-  { subject: 'Technique', A: 78, fullMark: 100 },
-  { subject: 'Discipline', A: 95, fullMark: 100 },
-  { subject: 'Force', A: 70, fullMark: 100 },
-];
-
-const academicHistory = [
-  { trim: 'T1 2025', moyenne: 14.2 },
-  { trim: 'T2 2025', moyenne: 13.8 },
-  { trim: 'T3 2025', moyenne: 15.1 },
-  { trim: 'T1 2026', moyenne: 14.8 },
-];
-
-export default function Eleves() {
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('general');
+// --- Student Detail Popup Component ---
+const StudentDetail = ({ student, onClose }: { student: any; onClose: () => void }) => {
+  if (!student) return null;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold dark:text-white">Élèves</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Gérez le registre complet des pensionnaires de l'académie.</p>
+    <>
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        exit={{ opacity: 0 }} 
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150]" 
+      />
+      <motion.div 
+        initial={{ y: '100%' }} 
+        animate={{ y: 0 }} 
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed bottom-0 left-0 right-0 lg:left-auto lg:right-0 lg:top-0 lg:w-[480px] bg-white dark:bg-gray-900 z-[160] rounded-t-[32px] lg:rounded-none shadow-2xl flex flex-col max-h-[90vh] lg:max-h-full"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-gold/10 flex items-center justify-center text-brand-gold font-bold text-xl">
+              {student.fullName?.charAt(0)}
+            </div>
+            <div>
+              <h3 className="text-xl font-display font-bold dark:text-white">{student.fullName}</h3>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                ID: #{student.id} • {student.enrollment?.category || 'Non classé'}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-2 text-sm font-medium shadow-sm">
-             <UsersIcon className="w-4 h-4 text-brand-gold mr-2" />
-             <span className="dark:text-white">124 Élèves inscrits</span>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-12">
+          {/* Main Info Grid */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date de naissance</p>
+              <div className="flex items-center gap-2 text-sm dark:text-gray-200">
+                <Calendar size={14} className="text-brand-gold" />
+                <span>{new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sexe</p>
+              <div className="flex items-center gap-2 text-sm dark:text-gray-200">
+                <User size={14} className="text-brand-gold" />
+                <span>{student.sex === 'M' ? 'Masculin' : 'Féminin'}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Téléphone</p>
+              <div className="flex items-center gap-2 text-sm dark:text-gray-200">
+                <Phone size={14} className="text-brand-gold" />
+                <span>{student.phone || 'Non renseigné'}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ville</p>
+              <div className="flex items-center gap-2 text-sm dark:text-gray-200">
+                <MapPin size={14} className="text-brand-gold" />
+                <span>{student.city} ({student.region})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Academic & Sports Section */}
+          <div className="space-y-4">
+            <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/30">
+              <div className="flex items-center gap-3 mb-4">
+                <BookOpen size={18} className="text-blue-500" />
+                <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Scolaire</h4>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Établissement</span>
+                  <span className="font-semibold dark:text-gray-200">{student.school}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Classe</span>
+                  <span className="font-semibold dark:text-gray-200">{student.classLevel}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Moyenne</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{student.averageGrade}/20</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/30">
+              <div className="flex items-center gap-3 mb-4">
+                <Trophy size={18} className="text-amber-500" />
+                <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Sportif</h4>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Poste(s)</span>
+                  <span className="font-semibold dark:text-gray-200">
+                    {student.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Club Actuel</span>
+                  <span className="font-semibold dark:text-gray-200">{student.currentClub || 'Libre'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Expérience</span>
+                  <span className="font-semibold dark:text-gray-200">{student.yearsOfPractice} ans</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Parent Info */}
+          <div className="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+             <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Contact Parent/Tuteur</h4>
+             <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold dark:text-white">{student.parentName}</span>
+                <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-bold uppercase">{student.parentRelation}</span>
+             </div>
+             <p className="text-xs text-gray-500 mb-1">{student.parentProfession}</p>
+             <p className="text-sm font-medium dark:text-gray-300">{student.parentPhone}</p>
           </div>
         </div>
+      </motion.div>
+    </>
+  );
+};
+
+export default function Eleves() {
+  const [students, setStudents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  const fetchStudents = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.students.list();
+      setStudents(data.students);
+    } catch (error) {
+      console.error('Failed to fetch students:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const matchesSearch = s.fullName?.toLowerCase().includes(search.toLowerCase()) || 
+                           s.city?.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || s.enrollment?.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [students, search, categoryFilter]);
+
+  return (
+    <div className="space-y-8 animate-slide-up">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold dark:text-white">Annuaire des Élèves</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Liste complète des académiciens inscrits à CFAZ.</p>
+        </div>
+        <button className="hidden lg:flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm font-bold dark:text-white shadow-sm hover:shadow-md transition-all">
+          <Download size={18} /> Télécharger Annuaire
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Student List */}
-        <div className="lg:col-span-4 space-y-4">
-           <div className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-2xl p-2 border border-gray-100 dark:border-gray-800 shadow-sm">
-              <Search className="w-4 h-4 text-gray-400 ml-2" />
-              <input type="text" placeholder="Rechercher..." className="bg-transparent border-none focus:ring-0 text-sm flex-1" />
-           </div>
-           
-           <div className="space-y-3">
-              {students.map((student) => (
-                <motion.div 
-                  key={student.id}
-                  whileHover={{ x: 4 }}
-                  onClick={() => setSelectedStudent(student)}
-                  className={cn(
-                    "p-4 rounded-3xl border transition-all cursor-pointer flex items-center gap-4 group",
-                    selectedStudent?.id === student.id 
-                      ? "bg-brand-blue text-white border-brand-blue shadow-lg shadow-brand-blue/20" 
-                      : "bg-white dark:bg-gray-900 border-slate-100 dark:border-gray-800 hover:border-brand-gold/30"
-                  )}
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 overflow-hidden relative border-2 border-transparent group-hover:border-brand-gold transition-all">
-                     <img src={student.image} alt={student.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1">
-                     <p className="text-sm font-bold truncate">{student.name}</p>
-                     <div className="flex items-center gap-2 mt-1">
-                        <span className={cn(
-                          "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
-                          selectedStudent?.id === student.id ? "bg-white/20 text-white" : "bg-brand-gold/10 text-brand-gold"
-                        )}>
-                          {student.category}
-                        </span>
-                        <span className="text-[10px] opacity-60 font-medium">#{student.id}</span>
-                     </div>
-                  </div>
-                  <ChevronRight size={16} className={cn("transition-transform", selectedStudent?.id === student.id ? "translate-x-1" : "text-slate-300")} />
-                </motion.div>
-              ))}
-           </div>
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input 
+            type="text" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par nom, ville..." 
+            className="w-full pl-12 pr-4 py-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/30 dark:border-gray-800 rounded-2xl text-sm dark:text-white focus:border-brand-gold outline-none shadow-sm transition-all"
+          />
         </div>
-
-        {/* Student Detail View */}
-        <div className="lg:col-span-8">
-           <AnimatePresence mode="wait">
-              {selectedStudent ? (
-                <motion.div 
-                  key={selectedStudent.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="bg-white dark:bg-gray-900 rounded-[32px] border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
-                >
-                  {/* Profile Header */}
-                  <div className="bg-brand-blue p-8 lg:p-12 relative overflow-hidden">
-                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                     
-                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                        <div className="w-32 h-32 rounded-3xl bg-white p-1 border-4 border-white/20 shadow-2xl relative overflow-hidden shrink-0">
-                           <img src={selectedStudent.image} alt={selectedStudent.name} className="w-full h-full object-cover rounded-2xl" />
-                        </div>
-                        <div className="text-center md:text-left flex-1">
-                           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                              <span className="px-3 py-1 bg-brand-gold text-brand-blue text-[10px] font-bold rounded-full uppercase tracking-widest">Élite Académie</span>
-                              <span className="px-3 py-1 bg-white/10 text-white border border-white/20 text-[10px] font-bold rounded-full uppercase tracking-widest">{selectedStudent.status}</span>
-                           </div>
-                           <h2 className="text-3xl font-display font-bold text-white mb-2">{selectedStudent.name}</h2>
-                           <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-blue-100/60 text-sm font-medium">
-                              <div className="flex items-center gap-2"><MapPin size={14} /> Yaoundé, CMR</div>
-                              <div className="flex items-center gap-2"><Calendar size={14} /> Né le 12 Juin 2012 ({selectedStudent.age} ans)</div>
-                              <div className="flex items-center gap-2"><Activity size={14} /> Groupe O+</div>
-                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                           <button className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-colors"><Mail size={18} /></button>
-                           <button className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-colors"><Phone size={18} /></button>
-                           <button className="p-3 bg-brand-gold text-brand-blue rounded-2xl font-bold text-sm px-6">Editer</button>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Tabs */}
-                  <div className="border-b border-gray-100 dark:border-gray-800 px-8">
-                     <div className="flex items-center gap-8">
-                        {[
-                          { id: 'general', label: 'Général', icon: UserIcon },
-                          { id: 'scolaire', label: 'Scolaire', icon: GraduationCap },
-                          { id: 'sportif', label: 'Sportif', icon: Trophy },
-                          { id: 'financier', label: 'Financier', icon: Wallet },
-                        ].map((tab) => (
-                          <button 
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={cn(
-                              "py-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider relative transition-colors",
-                              activeTab === tab.id ? "text-brand-gold" : "text-gray-400 hover:text-gray-600"
-                            )}
-                          >
-                            <tab.icon size={16} />
-                            {tab.label}
-                            {activeTab === tab.id && (
-                              <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-brand-gold rounded-t-full" />
-                            )}
-                          </button>
-                        ))}
-                     </div>
-                  </div>
-
-                  {/* Tab Content */}
-                  <div className="p-8 lg:p-12">
-                     {activeTab === 'general' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                           <div className="space-y-6">
-                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Informations Personnelles</h3>
-                              <div className="grid grid-cols-2 gap-x-12 gap-y-6">
-                                <div>
-                                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Tuteur Légal</p>
-                                   <p className="text-sm font-semibold dark:text-white">M. Samuel Moukandjo</p>
-                                </div>
-                                <div>
-                                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Profession</p>
-                                   <p className="text-sm font-semibold dark:text-white">Opérateur Logistique</p>
-                                </div>
-                                <div>
-                                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Contact Tuteur</p>
-                                   <p className="text-sm font-semibold dark:text-white">+237 6XX XX XX XX</p>
-                                </div>
-                                <div>
-                                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Quartier</p>
-                                   <p className="text-sm font-semibold dark:text-white">Bastos, Yaoundé</p>
-                                </div>
-                              </div>
-                           </div>
-                           <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
-                               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Checklist Dossier</h3>
-                               <div className="space-y-3">
-                                  {['Acte de Naissance', 'Carnet de Santé', 'Bulletins 2024', 'Fiche d\'inscription'].map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-3">
-                                       <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white">
-                                          <Activity size={12} /> {/* Hacky checkmark */}
-                                       </div>
-                                       <span className="text-sm font-medium dark:text-gray-300">{item}</span>
-                                    </div>
-                                  ))}
-                               </div>
-                           </div>
-                        </div>
-                     )}
-
-                     {activeTab === 'scolaire' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                           <div className="space-y-6">
-                              <div className="flex items-center justify-between">
-                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Evolution des Moyennes</h3>
-                                 <div className="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase">Progression Positive</div>
-                              </div>
-                              <div className="h-[200px] w-full">
-                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={academicHistory}>
-                                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                       <XAxis dataKey="trim" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#6B7280'}} />
-                                       <YAxis domain={[10, 20]} axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#6B7280'}} />
-                                       <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} />
-                                       <Line type="monotone" dataKey="moyenne" stroke="#D4AF37" strokeWidth={3} dot={{ r: 4, fill: '#D4AF37' }} activeDot={{ r: 6 }} />
-                                    </LineChart>
-                                 </ResponsiveContainer>
-                              </div>
-                           </div>
-                           <div className="space-y-3">
-                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Derniers Bulletins</h3>
-                              {[
-                                { title: 'Trimestre 1 2026', note: '14.8/20', status: 'Excellent' },
-                                { title: 'Trimestre 3 2025', note: '15.1/20', status: 'Félicitations' },
-                              ].map((b, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 group hover:border-brand-gold transition-colors">
-                                   <div>
-                                      <p className="text-sm font-bold dark:text-white">{b.title}</p>
-                                      <p className="text-[10px] text-gray-500 font-bold uppercase">{b.status}</p>
-                                   </div>
-                                   <div className="text-right">
-                                      <p className="text-lg font-bold text-brand-gold">{b.note}</p>
-                                      <button className="text-[10px] text-gray-400 hover:text-brand-gold font-bold uppercase underline">Voir PDF</button>
-                                   </div>
-                                </div>
-                              ))}
-                           </div>
-                        </div>
-                     )}
-
-                     {activeTab === 'sportif' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                           <div className="h-[300px] w-full">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={athleticData}>
-                                  <PolarGrid stroke="#E5E7EB" />
-                                  <PolarAngleAxis dataKey="subject" tick={{fontSize: 10, fontWeight: 600, fill: '#6B7280'}} />
-                                  <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
-                                  <Radar name={selectedStudent.name} dataKey="A" stroke="#FACC15" strokeWidth={2} fill="#FACC15" fillOpacity={0.6} />
-                                </RadarChart>
-                              </ResponsiveContainer>
-                           </div>
-                           <div className="space-y-4">
-                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Points Forts & Axes de Travail</h3>
-                              <div className="space-y-3">
-                                 <div className="p-4 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-2xl">
-                                    <p className="text-[10px] text-green-700 dark:text-green-400 font-bold uppercase tracking-widest mb-1">Forces</p>
-                                    <p className="text-xs font-medium dark:text-gray-300">Excellente vision de jeu, dépassement de soi et endurance au dessus du lot.</p>
-                                 </div>
-                                 <div className="p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/20 rounded-2xl">
-                                    <p className="text-[10px] text-orange-700 dark:text-orange-400 font-bold uppercase tracking-widest mb-1">Axes de Travail</p>
-                                    <p className="text-xs font-medium dark:text-gray-300">Travail à intensifier sur le pied faible et la finition devant le but.</p>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     )}
-
-                     {activeTab === 'financier' && (
-                        <div className="space-y-6">
-                           <div className="grid grid-cols-3 gap-6">
-                               <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800">
-                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Payé</p>
-                                  <p className="text-lg font-bold dark:text-white">450.000 FCFA</p>
-                               </div>
-                               <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800">
-                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Reste à Payer</p>
-                                  <p className="text-lg font-bold text-red-500 text-brand-gold">50.000 FCFA</p>
-                               </div>
-                               <div className="p-4 bg-brand-gold/10 rounded-2xl border border-brand-gold/20">
-                                  <p className="text-[10px] text-brand-gold font-bold uppercase mb-1">Bourse</p>
-                                  <p className="text-lg font-bold text-brand-gold">Demi-bourse</p>
-                               </div>
-                           </div>
-                           <table className="w-full text-left text-sm">
-                              <thead>
-                                 <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100 dark:border-gray-800">
-                                    <th className="py-4">Date</th>
-                                    <th className="py-4">Description</th>
-                                    <th className="py-4 text-right">Montant</th>
-                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                                 <tr>
-                                    <td className="py-4 text-gray-500">10 Mar 2026</td>
-                                    <td className="py-4 font-medium dark:text-white">Pension et Internat - T2</td>
-                                    <td className="py-4 text-right font-bold">150.000 FCFA</td>
-                                 </tr>
-                                 <tr>
-                                    <td className="py-4 text-gray-500">05 Jan 2026</td>
-                                    <td className="py-4 font-medium dark:text-white">Uniforme et Equipements</td>
-                                    <td className="py-4 text-right font-bold">45.000 FCFA</td>
-                                 </tr>
-                              </tbody>
-                           </table>
-                        </div>
-                     )}
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="h-full min-h-[600px] flex flex-col items-center justify-center bg-white dark:bg-gray-900 rounded-[32px] border border-dashed border-gray-200 dark:border-gray-800 transition-all">
-                   <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                      <UserIcon size={32} className="text-gray-300" />
-                   </div>
-                   <h3 className="text-xl font-display font-bold dark:text-white mb-2">Sélectionnez un élève</h3>
-                   <p className="text-gray-500 dark:text-gray-400 text-sm max-w-[280px] text-center">Cliquez sur un profil dans la liste de gauche pour voir les détails complets.</p>
-                </div>
+        <div className="flex gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+          {['all', 'U13', 'U15', 'U17'].map(cat => (
+            <button 
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={cn(
+                "px-6 py-4 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border whitespace-nowrap",
+                categoryFilter === cat 
+                  ? "bg-brand-gold text-brand-blue border-brand-gold shadow-lg shadow-brand-gold/20" 
+                  : "bg-white/50 dark:bg-gray-800/50 text-gray-500 border-white/30 dark:border-gray-800 hover:border-brand-gold"
               )}
-           </AnimatePresence>
+            >
+              {cat === 'all' ? 'Toutes Catégories' : cat}
+            </button>
+          ))}
         </div>
       </div>
+
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-24">
+          <Loader2 className="w-12 h-12 text-brand-gold animate-spin mb-4" />
+          <p className="text-gray-500 font-medium animate-pulse">Chargement de l'annuaire...</p>
+        </div>
+      ) : filteredStudents.length > 0 ? (
+        /* Responsive Grid: Cards on mobile, Table or detailed Cards on Desktop */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredStudents.map((s, i) => (
+            <motion.div 
+              key={s.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => setSelectedStudent(s)}
+              className="group bg-white dark:bg-gray-900/60 backdrop-blur-md border border-white dark:border-gray-800 p-6 rounded-[32px] shadow-sm hover:shadow-xl hover:border-brand-gold/50 transition-all cursor-pointer relative overflow-hidden"
+            >
+              {/* Background accent */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+              
+              <div className="flex items-start justify-between relative z-10 mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-2xl group-hover:scale-110 transition-transform">
+                    {s.photo ? (
+                      <img src={s.photo} alt={s.fullName} className="w-full h-full object-cover rounded-3xl" />
+                    ) : (
+                      s.fullName?.charAt(0)
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-display font-bold dark:text-white group-hover:text-brand-gold transition-colors">{s.fullName}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{s.id}</span>
+                      <span className="w-1 h-1 rounded-full bg-gray-300" />
+                      <span className="text-[10px] font-bold text-brand-gold uppercase tracking-widest">
+                        {s.enrollment?.category || 'Non classé'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                  <MapPin size={16} className="shrink-0" />
+                  <span className="truncate">{s.city}, {s.region}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                  <UserCheck size={16} className="shrink-0" />
+                  <span className="truncate">Scolarité: {s.classLevel} ({s.averageGrade}/20)</span>
+                </div>
+                
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <div className="flex -space-x-2">
+                    {s.positions && JSON.parse(s.positions).slice(0, 2).map((p: string) => (
+                      <div key={p} className="h-6 px-2 bg-gray-100 dark:bg-gray-800 border border-white dark:border-gray-900 rounded-md text-[8px] font-bold flex items-center dark:text-gray-300 uppercase">
+                        {p}
+                      </div>
+                    ))}
+                    {s.positions && JSON.parse(s.positions).length > 2 && (
+                      <div className="h-6 px-2 bg-brand-gold/10 text-brand-gold border border-white dark:border-gray-900 rounded-md text-[8px] font-bold flex items-center uppercase">
+                        +{JSON.parse(s.positions).length - 2}
+                      </div>
+                    )}
+                  </div>
+                  <ChevronRight size={20} className="text-gray-300 group-hover:text-brand-gold group-hover:translate-x-1 transition-all" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
+            <User size={32} className="text-gray-300" />
+          </div>
+          <h2 className="text-2xl font-bold dark:text-white mb-2">Aucun élève trouvé</h2>
+          <p className="text-gray-500 max-w-sm">Désolé, nous n'avons trouvé aucun élève correspondant à vos critères de recherche.</p>
+        </div>
+      )}
+
+      {/* Detail Modal/Drawer */}
+      <AnimatePresence>
+        {selectedStudent && (
+          <StudentDetail 
+            student={selectedStudent} 
+            onClose={() => setSelectedStudent(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
-const UsersIcon = (props: any) => <Users {...props} />;
