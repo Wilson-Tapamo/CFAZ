@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Filter, Plus, MoreHorizontal, Download, CheckCircle2, Clock, AlertCircle, 
   X, Loader2, Calendar, LayoutGrid, List, User, MapPin, Phone, BookOpen, Trophy, 
-  UserCheck, ClipboardList, Star, ChevronRight, TrendingUp
+  UserCheck, ClipboardList, Star, ChevronRight, TrendingUp, Edit3, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { api, formatCFA } from '@/lib/api';
+import { api, formatCFA, getCurrentAcademicYear } from '@/lib/api';
 import InscriptionWizard from '@/components/inscription/InscriptionWizard';
 
 // --- Components ---
@@ -38,7 +38,7 @@ const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
   </motion.div>
 );
 
-const EnrollmentDetail = ({ enrollment, onClose }: { enrollment: any; onClose: () => void }) => {
+const EnrollmentDetail = ({ enrollment, onClose, onEdit }: { enrollment: any; onClose: () => void; onEdit: (e: any) => void }) => {
   if (!enrollment) return null;
   const student = enrollment.student;
 
@@ -46,29 +46,36 @@ const EnrollmentDetail = ({ enrollment, onClose }: { enrollment: any; onClose: (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150]" />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-gray-900 z-[160] shadow-2xl flex flex-col">
+        className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-gray-950 z-[160] shadow-2xl flex flex-col h-full lg:h-auto lg:max-h-screen">
         
         {/* Header */}
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white/80 dark:bg-gray-950/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-brand-gold/10 flex items-center justify-center text-brand-gold font-bold text-xl uppercase">
-              {student?.fullName?.charAt(0)}
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 font-bold text-2xl overflow-hidden border border-indigo-100 dark:border-indigo-800">
+              {student?.photo ? (
+                <img src={student.photo} alt={student.fullName} className="w-full h-full object-cover" />
+              ) : student?.fullName?.charAt(0)}
             </div>
             <div>
-              <h3 className="text-xl font-display font-bold dark:text-white">{student?.fullName}</h3>
-              <div className="flex items-center gap-2">
+              <h3 className="text-xl font-display font-bold dark:text-white leading-tight">{student?.fullName}</h3>
+              <div className="flex items-center gap-2 mt-1">
                 <StatusBadge status={enrollment.status} />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{enrollment.id} • {enrollment.academicYear}</span>
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onEdit(enrollment)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-brand-gold/10 hover:text-brand-gold rounded-xl transition-all">
+              <Edit3 size={18} />
+            </button>
+            <button onClick={onClose} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8">
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4">
             <button className="flex items-center justify-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 dark:border-indigo-800/30">
@@ -79,45 +86,78 @@ const EnrollmentDetail = ({ enrollment, onClose }: { enrollment: any; onClose: (
             </button>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-4">
-             <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Catégorie</p>
-                <p className="text-lg font-bold dark:text-white">{enrollment.category || 'N/A'}</p>
+          {/* Scolarité Quick View */}
+          <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/10 dark:to-blue-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-800/30">
+             <div className="flex items-center gap-3 mb-4">
+                <BookOpen size={18} className="text-indigo-600" />
+                <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Académique</h4>
              </div>
-             <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Moyenne Scolaire</p>
-                <p className="text-lg font-bold dark:text-white">{student?.averageGrade || '0'}/20</p>
+             <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Établissement</p>
+                  <p className="text-sm font-bold dark:text-white">{student?.school}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Classe / Niveau</p>
+                  <p className="text-sm font-bold dark:text-white">{student?.classLevel}</p>
+                </div>
              </div>
           </div>
 
-          {/* Info Sections */}
-          <div className="space-y-6">
-            <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-               <div className="flex items-center gap-3 mb-4">
-                  <User size={18} className="text-brand-gold" />
-                  <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Informations Personnelles</h4>
-               </div>
-               <div className="grid grid-cols-2 gap-y-4 text-sm">
-                  <div><p className="text-gray-400 text-xs">Date de Naissance</p><p className="font-medium dark:text-gray-200">{student?.dateOfBirth}</p></div>
-                  <div><p className="text-gray-400 text-xs">Lieu de Naissance</p><p className="font-medium dark:text-gray-200">{student?.placeOfBirth}</p></div>
-                  <div><p className="text-gray-400 text-xs">Téléphone</p><p className="font-medium dark:text-gray-200">{student?.phone || 'N/A'}</p></div>
-                  <div><p className="text-gray-400 text-xs">Ville</p><p className="font-medium dark:text-gray-200">{student?.city}</p></div>
-               </div>
-            </div>
+          {/* Contacts Section */}
+          <div className="space-y-4">
+             <div className="p-6 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-4">
+                   <Phone size={18} className="text-brand-gold" />
+                   <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Contacts Parent / Tuteur</h4>
+                </div>
+                <div className="space-y-4">
+                   <div className="flex justify-between items-start">
+                      <div>
+                         <p className="text-sm font-bold dark:text-white">{student?.parentName}</p>
+                         <p className="text-xs text-gray-500">{student?.parentProfession}</p>
+                      </div>
+                      <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-bold uppercase">{student?.parentRelation}</span>
+                   </div>
+                   <div className="flex flex-col gap-2">
+                      <a href={`tel:${student?.parentPhone}`} className="flex items-center gap-2 text-sm font-medium text-brand-blue dark:text-brand-gold hover:underline">
+                         <Phone size={14} /> {student?.parentPhone}
+                      </a>
+                      {student?.parentEmail && (
+                        <p className="text-xs text-gray-400">{student.parentEmail}</p>
+                      )}
+                   </div>
+                </div>
+             </div>
 
-            <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-               <div className="flex items-center gap-3 mb-4">
-                  <Trophy size={18} className="text-brand-gold" />
-                  <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Informations Sportives</h4>
-               </div>
-               <div className="grid grid-cols-2 gap-y-4 text-sm">
-                  <div><p className="text-gray-400 text-xs">Postes</p><p className="font-medium dark:text-gray-200">{student?.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}</p></div>
-                  <div><p className="text-gray-400 text-xs">Club Actuel</p><p className="font-medium dark:text-gray-200">{student?.currentClub || 'Libre'}</p></div>
-                  <div><p className="text-gray-400 text-xs">Années de pratique</p><p className="font-medium dark:text-gray-200">{student?.yearsOfPractice} ans</p></div>
-                  <div><p className="text-gray-400 text-xs">Étape Inscription</p><p className="font-bold text-brand-gold">Étape {enrollment.registrationStep}/6</p></div>
-               </div>
-            </div>
+             <div className="p-6 bg-red-50/50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
+                <div className="flex items-center gap-3 mb-4">
+                   <ShieldAlert size={18} className="text-red-500" />
+                   <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider text-red-600 dark:text-red-400">Contact d'Urgence</h4>
+                </div>
+                <div className="flex justify-between items-center">
+                   <div>
+                      <p className="text-sm font-bold dark:text-white">{student?.emergencyContactName || 'Non renseigné'}</p>
+                      <a href={`tel:${student?.emergencyContactPhone}`} className="text-sm font-bold text-red-600 dark:text-red-400 hover:underline">
+                         {student?.emergencyContactPhone}
+                      </a>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Sportive Details */}
+          <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+             <div className="flex items-center gap-3 mb-4">
+                <Trophy size={18} className="text-brand-gold" />
+                <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Détails Sportifs</h4>
+             </div>
+             <div className="grid grid-cols-2 gap-y-6 text-sm">
+                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Catégorie</p><p className="font-bold text-brand-gold text-lg uppercase">{enrollment.category || 'N/A'}</p></div>
+                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Postes</p><p className="font-semibold dark:text-gray-200">{student?.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}</p></div>
+                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Club Actuel</p><p className="font-semibold dark:text-gray-200">{student?.currentClub || 'Libre'}</p></div>
+                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Expérience</p><p className="font-semibold dark:text-gray-200">{student?.yearsOfPractice} ans</p></div>
+             </div>
           </div>
         </div>
       </motion.div>
@@ -132,10 +172,14 @@ export default function Inscriptions() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
   
+  // Edit mode state
+  const [editingData, setEditingData] = useState<any>(null);
+
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [academicYearFilter, setAcademicYearFilter] = useState(getCurrentAcademicYear());
 
   const fetchEnrollments = async () => {
     setIsLoading(true);
@@ -154,17 +198,36 @@ export default function Inscriptions() {
                            e.studentId.toString().includes(search);
       const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
       const matchesCategory = categoryFilter === 'all' || e.category === categoryFilter;
-      return matchesSearch && matchesStatus && matchesCategory;
+      const matchesYear = e.academicYear === academicYearFilter;
+      return matchesSearch && matchesStatus && matchesCategory && matchesYear;
     });
-  }, [enrollments, search, statusFilter, categoryFilter]);
+  }, [enrollments, search, statusFilter, categoryFilter, academicYearFilter]);
 
   const stats = useMemo(() => {
-    const total = enrollments.length;
-    const complet = enrollments.filter(e => e.status === 'complet').length;
-    const incomplet = enrollments.filter(e => e.status === 'incomplet').length;
-    const enCours = enrollments.filter(e => e.status === 'en_cours').length;
+    // Stats also respect the academicYearFilter
+    const currentYearData = enrollments.filter(e => e.academicYear === academicYearFilter);
+    const total = currentYearData.length;
+    const complet = currentYearData.filter(e => e.status === 'complet').length;
+    const incomplet = currentYearData.filter(e => e.status === 'incomplet').length;
+    const enCours = currentYearData.filter(e => e.status === 'en_cours').length;
     return { total, complet, incomplet, enCours };
+  }, [enrollments, academicYearFilter]);
+
+  const years = useMemo(() => {
+    const y = new Set(enrollments.map(e => e.academicYear));
+    if (y.size === 0) y.add(getCurrentAcademicYear());
+    return Array.from(y).sort().reverse();
   }, [enrollments]);
+
+  const handleEdit = (enrollment: any) => {
+    setEditingData({
+      ...enrollment.student,
+      category: enrollment.category,
+      studentId: enrollment.studentId
+    });
+    setSelectedEnrollment(null);
+    setShowWizard(true);
+  };
 
   const handleExport = () => {
     const headers = ['ID', 'Nom', 'Année', 'Catégorie', 'Statut'];
@@ -173,7 +236,7 @@ export default function Inscriptions() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `cfaz_inscriptions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `cfaz_inscriptions_${academicYearFilter}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -185,14 +248,22 @@ export default function Inscriptions() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-display font-bold dark:text-white">Inscriptions</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Gestion et suivi des dossiers d'inscription académique.</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Gestion des dossiers pour l'année {academicYearFilter}</p>
         </div>
         <div className="flex items-center gap-3">
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleExport}
-            className="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-gray-500 hover:text-brand-gold transition-all shadow-sm">
-            <Download size={20} />
-          </motion.button>
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setShowWizard(true)}
+          {/* Year Filter next to Nouvelle Inscription */}
+          <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-4 py-3 rounded-2xl shadow-sm">
+            <Calendar size={18} className="text-brand-gold" />
+            <select 
+              value={academicYearFilter} 
+              onChange={e => setAcademicYearFilter(e.target.value)}
+              className="bg-transparent text-sm font-bold dark:text-white outline-none"
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { setEditingData(null); setShowWizard(true); }}
             className="bg-brand-blue text-white dark:bg-brand-gold dark:text-brand-blue font-bold px-6 py-3 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
             <Plus size={20} /> Nouvelle Inscription
           </motion.button>
@@ -231,13 +302,18 @@ export default function Inscriptions() {
           </div>
         </div>
 
-        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
-          <button onClick={() => setViewMode('table')} className={cn("p-2 rounded-xl transition-all", viewMode === 'table' ? "bg-white dark:bg-gray-700 text-brand-blue dark:text-brand-gold shadow-sm" : "text-gray-400")}>
-            <List size={20} />
-          </button>
-          <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-xl transition-all", viewMode === 'grid' ? "bg-white dark:bg-gray-700 text-brand-blue dark:text-brand-gold shadow-sm" : "text-gray-400")}>
-            <LayoutGrid size={20} />
-          </button>
+        <div className="flex items-center gap-4">
+           <button onClick={handleExport} className="hidden md:flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-brand-gold transition-all">
+              <Download size={18} /> Export
+           </button>
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
+            <button onClick={() => setViewMode('table')} className={cn("p-2 rounded-xl transition-all", viewMode === 'table' ? "bg-white dark:bg-gray-700 text-brand-blue dark:text-brand-gold shadow-sm" : "text-gray-400")}>
+              <List size={20} />
+            </button>
+            <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-xl transition-all", viewMode === 'grid' ? "bg-white dark:bg-gray-700 text-brand-blue dark:text-brand-gold shadow-sm" : "text-gray-400")}>
+              <LayoutGrid size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -246,7 +322,7 @@ export default function Inscriptions() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <Loader2 className="w-10 h-10 text-brand-gold animate-spin" />
-            <p className="text-gray-500 text-sm font-medium animate-pulse">Chargement des données...</p>
+            <p className="text-gray-500 text-sm font-medium animate-pulse">Chargement des dossiers...</p>
           </div>
         ) : filteredEnrollments.length > 0 ? (
           viewMode === 'table' ? (
@@ -255,9 +331,9 @@ export default function Inscriptions() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-gray-50/50 dark:bg-gray-800/50">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">ID</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Candidat</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Année</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Établissement</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Classe</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Catégorie</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Statut</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Action</th>
@@ -268,16 +344,19 @@ export default function Inscriptions() {
                       <motion.tr key={e.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                         onClick={() => setSelectedEnrollment(e)}
                         className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
-                        <td className="px-6 py-4 text-sm font-mono text-gray-400">#{e.id}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold text-xs overflow-hidden">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold text-xs overflow-hidden border border-white dark:border-gray-700">
                               {e.student?.photo ? <img src={e.student.photo} className="w-full h-full object-cover" /> : e.student?.fullName?.charAt(0)}
                             </div>
-                            <span className="text-sm font-semibold dark:text-white">{e.student?.fullName}</span>
+                            <div>
+                               <p className="text-sm font-bold dark:text-white">{e.student?.fullName}</p>
+                               <p className="text-[10px] text-gray-400 font-mono">#{e.id}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{e.academicYear}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 font-medium">{e.student?.school}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 font-bold">{e.student?.classLevel}</td>
                         <td className="px-6 py-4"><span className="px-2 py-1 bg-brand-gold/10 text-brand-gold text-[10px] font-bold rounded uppercase tracking-wider">{e.category || 'N/A'}</span></td>
                         <td className="px-6 py-4"><StatusBadge status={e.status} /></td>
                         <td className="px-6 py-4 text-right">
@@ -297,18 +376,18 @@ export default function Inscriptions() {
                   className="group bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border border-white dark:border-gray-800 p-6 rounded-[32px] shadow-sm hover:shadow-xl hover:border-brand-gold/50 transition-all cursor-pointer relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
                   <div className="flex items-center gap-4 mb-6 relative z-10">
-                    <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 font-bold text-2xl overflow-hidden">
+                    <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 font-bold text-2xl overflow-hidden border border-white/50 dark:border-gray-700 shadow-sm">
                        {e.student?.photo ? <img src={e.student.photo} className="w-full h-full object-cover" /> : e.student?.fullName?.charAt(0)}
                     </div>
                     <div>
                       <h3 className="text-lg font-display font-bold dark:text-white group-hover:text-brand-gold transition-colors truncate max-w-[150px]">{e.student?.fullName}</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{e.id} • {e.academicYear}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{e.id} • {e.student?.classLevel}</p>
                     </div>
                   </div>
                   <div className="space-y-3 relative z-10">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-400 uppercase font-bold tracking-widest">Catégorie</span>
-                      <span className="text-sm font-bold dark:text-white">{e.category || 'N/A'}</span>
+                      <span className="text-xs text-gray-400 uppercase font-bold tracking-widest">Établissement</span>
+                      <span className="text-sm font-bold dark:text-white truncate max-w-[150px]">{e.student?.school}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400 uppercase font-bold tracking-widest">Statut</span>
@@ -324,16 +403,29 @@ export default function Inscriptions() {
             <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
               <Search size={24} className="text-gray-300" />
             </div>
-            <h3 className="text-lg font-bold dark:text-white">Aucun dossier trouvé</h3>
-            <p className="text-gray-500 text-sm max-w-xs">Ajustez vos filtres ou effectuez une nouvelle recherche.</p>
+            <h3 className="text-lg font-bold dark:text-white">Aucun dossier trouvé pour l'année {academicYearFilter}</h3>
+            <p className="text-gray-500 text-sm max-w-xs">Changez d'année académique ou ajustez vos filtres.</p>
           </div>
         )}
       </div>
 
       {/* Popups */}
       <AnimatePresence>
-        {showWizard && <InscriptionWizard onClose={() => setShowWizard(false)} onSuccess={fetchEnrollments} />}
-        {selectedEnrollment && <EnrollmentDetail enrollment={selectedEnrollment} onClose={() => setSelectedEnrollment(null)} />}
+        {showWizard && (
+          <InscriptionWizard 
+            onClose={() => { setShowWizard(false); setEditingData(null); }} 
+            onSuccess={fetchEnrollments}
+            initialData={editingData}
+            studentId={editingData?.studentId}
+          />
+        )}
+        {selectedEnrollment && (
+          <EnrollmentDetail 
+            enrollment={selectedEnrollment} 
+            onClose={() => setSelectedEnrollment(null)} 
+            onEdit={handleEdit}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

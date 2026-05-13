@@ -19,16 +19,21 @@ const STEPS = [
   { id: 6, label: 'Finance', short: 'Finance' },
 ];
 
-interface Props { onClose: () => void; onSuccess: () => void; }
+interface Props { 
+  onClose: () => void; 
+  onSuccess: () => void; 
+  initialData?: any;
+  studentId?: number;
+}
 
-export default function InscriptionWizard({ onClose, onSuccess }: Props) {
+export default function InscriptionWizard({ onClose, onSuccess, initialData, studentId }: Props) {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   // Form data
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState<any>(initialData || {
     nationality: 'Camerounaise',
     academicYearSchool: getCurrentAcademicYear(),
     positions: [],
@@ -67,21 +72,45 @@ export default function InscriptionWizard({ onClose, onSuccess }: Props) {
     setSaving(true);
     setError('');
     try {
-      // 1. Create student
-      const { student } = await api.students.create(formData);
+      let currentStudent: any;
+      let currentEnrollment: any;
 
-      // 2. Create enrollment
-      const { enrollment } = await api.enrollments.create({
-        studentId: student.id,
-        academicYear: getCurrentAcademicYear(),
-        category: formData.category,
-      });
+      if (studentId) {
+        // Update existing student
+        const { student } = await api.students.update(studentId, formData);
+        currentStudent = student;
+        
+        // Find existing enrollment for this year or create if missing
+        const { enrollments: studentEnrollments } = await api.enrollments.list({ studentId, academicYear: getCurrentAcademicYear() });
+        if (studentEnrollments && studentEnrollments.length > 0) {
+          currentEnrollment = studentEnrollments[0];
+        } else {
+          const { enrollment } = await api.enrollments.create({
+            studentId,
+            academicYear: getCurrentAcademicYear(),
+            category: formData.category,
+          });
+          currentEnrollment = enrollment;
+        }
+      } else {
+        // 1. Create student
+        const { student } = await api.students.create(formData);
+        currentStudent = student;
+  
+        // 2. Create enrollment
+        const { enrollment } = await api.enrollments.create({
+          studentId: student.id,
+          academicYear: getCurrentAcademicYear(),
+          category: formData.category,
+        });
+        currentEnrollment = enrollment;
+      }
 
       // 3. Upload documents
       for (const [type, doc] of Object.entries(uploadedDocs)) {
         await api.documents.upload({
-          studentId: student.id,
-          enrollmentId: enrollment.id,
+          studentId: currentStudent.id,
+          enrollmentId: currentEnrollment.id,
           type,
           fileName: doc.fileName,
           fileData: doc.fileData,
@@ -92,8 +121,8 @@ export default function InscriptionWizard({ onClose, onSuccess }: Props) {
       // 4. Record payments
       for (const p of localPayments) {
         await api.payments.create({
-          studentId: student.id,
-          enrollmentId: enrollment.id,
+          studentId: currentStudent.id,
+          enrollmentId: currentEnrollment.id,
           category: p.category,
           paidAmount: p.amount,
           method: p.method,
@@ -103,7 +132,7 @@ export default function InscriptionWizard({ onClose, onSuccess }: Props) {
 
       // 5. Update enrollment status
       const hasAllDocs = Object.keys(uploadedDocs).length >= 7;
-      await api.enrollments.update(enrollment.id, {
+      await api.enrollments.update(currentEnrollment.id, {
         status: hasAllDocs ? 'complet' : 'incomplet',
         registrationStep: 6,
       });
