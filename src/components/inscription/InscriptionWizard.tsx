@@ -150,7 +150,7 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed inset-y-0 right-0 w-full max-w-4xl bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
+        className="fixed top-[80px] inset-x-0 bottom-0 lg:left-auto lg:right-0 lg:inset-y-0 w-full lg:max-w-4xl bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
 
         {/* Header */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
