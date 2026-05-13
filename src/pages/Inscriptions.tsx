@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { api, formatCFA, getCurrentAcademicYear } from '@/lib/api';
 import InscriptionWizard from '@/components/inscription/InscriptionWizard';
+import AcademicEvaluationModal from '@/components/evaluations/AcademicEvaluationModal';
 
 // --- Components ---
 
@@ -38,7 +39,7 @@ const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
   </motion.div>
 );
 
-const EnrollmentDetail = ({ enrollment, onClose, onEdit }: { enrollment: any; onClose: () => void; onEdit: (e: any) => void }) => {
+const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enrollment: any; onClose: () => void; onEdit: (e: any) => void; onAcademicEval: (e: any) => void }) => {
   if (!enrollment) return null;
   const student = enrollment.student;
 
@@ -78,7 +79,10 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit }: { enrollment: any; on
         <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8">
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 dark:border-indigo-800/30">
+            <button 
+              onClick={() => onAcademicEval(enrollment)}
+              className="flex items-center justify-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 dark:border-indigo-800/30"
+            >
               <ClipboardList size={18} /> Évaluation Scolaire
             </button>
             <button className="flex items-center justify-center gap-2 p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl font-bold text-sm hover:bg-amber-100 transition-all border border-amber-100 dark:border-amber-800/30">
@@ -171,6 +175,10 @@ export default function Inscriptions() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
+  
+  // Evaluation state
+  const [showAcademicEval, setShowAcademicEval] = useState(false);
+  const [evalEnrollment, setEvalEnrollment] = useState<any>(null);
   
   // Edit mode state
   const [editingData, setEditingData] = useState<any>(null);
@@ -424,6 +432,18 @@ export default function Inscriptions() {
             enrollment={selectedEnrollment} 
             onClose={() => setSelectedEnrollment(null)} 
             onEdit={handleEdit}
+            onAcademicEval={(e) => {
+              setEvalEnrollment(e);
+              setShowAcademicEval(true);
+            }}
+          />
+        )}
+        {showAcademicEval && evalEnrollment && (
+          <AcademicEvaluationModal
+            student={evalEnrollment.student}
+            enrollment={evalEnrollment}
+            onClose={() => { setShowAcademicEval(false); setEvalEnrollment(null); }}
+            onSuccess={() => { fetchEnrollments(); }}
           />
         )}
       </AnimatePresence>

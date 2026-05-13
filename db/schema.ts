@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM Schema for CFAZ - Neon PostgreSQL
  */
-import { pgTable, serial, varchar, text, integer, timestamp, real, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, integer, timestamp, real, pgEnum, doublePrecision } from 'drizzle-orm/pg-core';
 
 // ─── Enums ────────────────────────────────────────────────
 export const roleEnum = pgEnum('role', ['admin', 'coach', 'parent']);
@@ -109,3 +109,22 @@ export const payments = pgTable('payments', {
   status: paymentStatusEnum('status').notNull().default('impaye'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const academicEvaluations = pgTable('academic_evaluations', {
+  id: serial('id').primaryKey(),
+  studentId: integer('student_id').references(() => students.id).notNull(),
+  enrollmentId: integer('enrollment_id').references(() => enrollments.id).notNull(),
+  sequence: varchar('sequence', { length: 20 }).notNull(), // Sequence 1, 2, etc.
+  academicYear: varchar('academic_year', { length: 20 }).notNull(),
+  behaviorComment: text('behavior_comment'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const grades = pgTable('grades', {
+  id: serial('id').primaryKey(),
+  evaluationId: integer('evaluation_id').references(() => academicEvaluations.id).notNull(),
+  subject: varchar('subject', { length: 100 }).notNull(),
+  score: doublePrecision('score').notNull(),
+  coefficient: integer('coefficient').default(1).notNull(),
+});
+
