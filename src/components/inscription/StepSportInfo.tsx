@@ -29,6 +29,17 @@ export default function StepSportInfo({ data, onChange }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="md:col-span-2 space-y-1.5">
+          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Catégorie Sportive *</label>
+          <div className="flex gap-3">
+            {['U13', 'U15', 'U17'].map(c => (
+              <button key={c} type="button" onClick={() => onChange('category', c)}
+                className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all ${data.category === c ? 'bg-brand-gold text-brand-blue shadow-lg' : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 hover:border-brand-gold'}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="md:col-span-2 space-y-1.5">
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Club Actuel (si applicable)</label>
           <input type="text" value={data.currentClub || ''} onChange={e => onChange('currentClub', e.target.value)} placeholder="Nom du club" className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl py-3.5 px-4 text-sm dark:text-white focus:border-brand-gold transition-all" />
         </div>

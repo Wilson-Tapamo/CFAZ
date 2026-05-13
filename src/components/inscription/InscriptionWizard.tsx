@@ -74,6 +74,7 @@ export default function InscriptionWizard({ onClose, onSuccess }: Props) {
       const { enrollment } = await api.enrollments.create({
         studentId: student.id,
         academicYear: getCurrentAcademicYear(),
+        category: formData.category,
       });
 
       // 3. Upload documents
@@ -120,7 +121,7 @@ export default function InscriptionWizard({ onClose, onSuccess }: Props) {
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
+        className="fixed inset-y-0 right-0 w-full max-w-4xl bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
 
         {/* Header */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
