@@ -25,7 +25,7 @@ const StudentDetail = ({ student, onClose }: { student: any; onClose: () => void
         animate={{ x: 0 }} 
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed top-[80px] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-gray-900 z-[160] shadow-2xl flex flex-col"
+        className="fixed top-[80px] lg:top-0 inset-x-0 h-[calc(100vh-80px)] lg:h-screen bg-white dark:bg-gray-900 z-[160] shadow-2xl flex flex-col overflow-hidden"
       >
         {/* Header - Static */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 shrink-0">
