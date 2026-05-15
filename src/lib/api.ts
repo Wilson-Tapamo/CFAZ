@@ -153,6 +153,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    stats: (academicYear?: string) =>
+      request<{ global: any; categories: any[]; topStudents: any[] }>(`/academic-stats${academicYear ? `?academicYear=${academicYear}` : ''}`),
+
+    reports: (params: { category?: string; academicYear?: string }) => {
+      const query = new URLSearchParams();
+      if (params.category) query.set('category', params.category);
+      if (params.academicYear) query.set('academicYear', params.academicYear);
+      return request<{ reports: any[] }>(`/academic-reports?${query}`);
+    },
   },
 };
 
