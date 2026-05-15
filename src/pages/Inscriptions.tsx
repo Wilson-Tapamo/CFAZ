@@ -42,6 +42,40 @@ const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
 const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enrollment: any; onClose: () => void; onEdit: (e: any) => void; onAcademicEval: (e: any) => void }) => {
   if (!enrollment) return null;
   const student = enrollment.student;
+  const [activeTab, setActiveTab] = useState<'infos' | 'scolaire' | 'sportif'>('infos');
+  const [evaluations, setEvaluations] = useState<any[]>([]);
+  const [loadingEvals, setLoadingEvals] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'scolaire') {
+      const fetchEvals = async () => {
+        setLoadingEvals(true);
+        try {
+          const data = await api.evaluations.list({ enrollmentId: enrollment.id });
+          setEvaluations(data.evaluations);
+        } catch (error) { console.error(error); }
+        finally { setLoadingEvals(false); }
+      };
+      fetchEvals();
+    }
+  }, [activeTab, enrollment.id]);
+
+  // Derived academic stats
+  const academicStats = useMemo(() => {
+    if (evaluations.length === 0) return null;
+    const latest = evaluations[0];
+    const totalGrades = evaluations.flatMap(e => e.grades || []);
+    const average = totalGrades.length > 0 
+      ? (totalGrades.reduce((sum, g) => sum + Number(g.score), 0) / totalGrades.length).toFixed(2)
+      : 'N/A';
+    
+    return {
+      average,
+      totalEvals: evaluations.length,
+      latestSequence: latest.sequence,
+      latestComment: latest.behaviorComment
+    };
+  }, [evaluations]);
 
   return (
     <>
@@ -50,125 +84,268 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
         className="fixed top-[80px] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-gray-950 z-[160] shadow-2xl flex flex-col">
         
         {/* Header - Static */}
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950 shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 font-bold text-2xl overflow-hidden border border-indigo-100 dark:border-indigo-800">
-              {student?.photo ? (
-                <img src={student.photo} alt={student.fullName} className="w-full h-full object-cover" />
-              ) : student?.fullName?.charAt(0)}
-            </div>
-            <div>
-              <h3 className="text-xl font-display font-bold dark:text-white leading-tight">{student?.fullName}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <StatusBadge status={enrollment.status} />
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{enrollment.id} • {enrollment.academicYear}</span>
+        <div className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 shrink-0">
+          <div className="p-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 font-bold text-2xl overflow-hidden border border-indigo-100 dark:border-indigo-800">
+                {student?.photo ? (
+                  <img src={student.photo} alt={student.fullName} className="w-full h-full object-cover" />
+                ) : student?.fullName?.charAt(0)}
+              </div>
+              <div>
+                <h3 className="text-xl font-display font-bold dark:text-white leading-tight">{student?.fullName}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <StatusBadge status={enrollment.status} />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{enrollment.id} • {enrollment.academicYear}</span>
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => onEdit(enrollment)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-brand-gold/10 hover:text-brand-gold rounded-xl transition-all">
+                <Edit3 size={18} />
+              </button>
+              <button onClick={onClose} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => onEdit(enrollment)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-brand-gold/10 hover:text-brand-gold rounded-xl transition-all">
-              <Edit3 size={18} />
-            </button>
-            <button onClick={onClose} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+
+          {/* Tabs Navigation */}
+          <div className="px-6 flex items-center gap-6">
+            {[
+              { id: 'infos', label: 'Infos Générales', icon: User },
+              { id: 'scolaire', label: 'Suivi Scolaire', icon: BookOpen },
+              { id: 'sportif', label: 'Suivi Sportif', icon: Trophy }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex items-center gap-2 py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all",
+                  activeTab === tab.id 
+                    ? "border-brand-gold text-brand-gold" 
+                    : "border-transparent text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-12 space-y-8">
-          <div className="max-w-4xl mx-auto w-full space-y-8">
-            {/* Scolarité Quick View */}
-            <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/10 dark:to-blue-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-800/30">
-               <div className="flex items-center gap-3 mb-4">
-                  <BookOpen size={18} className="text-indigo-600" />
-                  <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Académique</h4>
-               </div>
-               <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Établissement</p>
-                    <p className="text-sm font-bold dark:text-white">{student?.school}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Classe / Niveau</p>
-                    <p className="text-sm font-bold dark:text-white">{student?.classLevel}</p>
-                  </div>
-               </div>
-            </div>
-
-            {/* Contacts Section */}
-            <div className="space-y-4">
-               <div className="p-6 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-4">
-                     <Phone size={18} className="text-brand-gold" />
-                     <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Contacts Parent / Tuteur</h4>
-                  </div>
-                  <div className="space-y-4">
-                     <div className="flex justify-between items-start">
+        <div className="flex-1 overflow-y-auto p-6 lg:p-12">
+          <div className="max-w-4xl mx-auto w-full">
+            <AnimatePresence mode="wait">
+              {activeTab === 'infos' && (
+                <motion.div key="infos" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                  {/* Scolarité Quick View */}
+                  <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/10 dark:to-blue-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-800/30">
+                    <div className="flex items-center gap-3 mb-4">
+                        <BookOpen size={18} className="text-indigo-600" />
+                        <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Académique</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
                         <div>
-                           <p className="text-sm font-bold dark:text-white">{student?.parentName}</p>
-                           <p className="text-xs text-gray-500">{student?.parentProfession}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Établissement</p>
+                          <p className="text-sm font-bold dark:text-white">{student?.school}</p>
                         </div>
-                        <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-bold uppercase">{student?.parentRelation}</span>
-                     </div>
-                     <div className="flex flex-col gap-2">
-                        <a href={`tel:${student?.parentPhone}`} className="flex items-center gap-2 text-sm font-medium text-brand-blue dark:text-brand-gold hover:underline">
-                           <Phone size={14} /> {student?.parentPhone}
-                        </a>
-                        {student?.parentEmail && (
-                          <p className="text-xs text-gray-400">{student.parentEmail}</p>
-                        )}
-                     </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Classe / Niveau</p>
+                          <p className="text-sm font-bold dark:text-white">{student?.classLevel}</p>
+                        </div>
+                    </div>
                   </div>
-               </div>
 
-               <div className="p-6 bg-red-50/50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
-                  <div className="flex items-center gap-3 mb-4">
-                     <ShieldAlert size={18} className="text-red-500" />
-                     <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider text-red-600 dark:text-red-400">Contact d'Urgence</h4>
-                  </div>
-                  <div className="flex justify-between items-center">
-                     <div>
-                        <p className="text-sm font-bold dark:text-white">{student?.emergencyContactName || 'Non renseigné'}</p>
-                        <a href={`tel:${student?.emergencyContactPhone}`} className="text-sm font-bold text-red-600 dark:text-red-400 hover:underline">
-                           {student?.emergencyContactPhone}
-                        </a>
-                     </div>
-                  </div>
-               </div>
-            </div>
+                  {/* Contacts Section */}
+                  <div className="space-y-4">
+                    <div className="p-6 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Phone size={18} className="text-brand-gold" />
+                          <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Contacts Parent / Tuteur</h4>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-sm font-bold dark:text-white">{student?.parentName}</p>
+                                <p className="text-xs text-gray-500">{student?.parentProfession}</p>
+                              </div>
+                              <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-bold uppercase">{student?.parentRelation}</span>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                              <a href={`tel:${student?.parentPhone}`} className="flex items-center gap-2 text-sm font-medium text-brand-blue dark:text-brand-gold hover:underline">
+                                <Phone size={14} /> {student?.parentPhone}
+                              </a>
+                              {student?.parentEmail && (
+                                <p className="text-xs text-gray-400">{student.parentEmail}</p>
+                              )}
+                          </div>
+                        </div>
+                    </div>
 
-            {/* Sportive Details */}
-            <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-               <div className="flex items-center gap-3 mb-4">
-                  <Trophy size={18} className="text-brand-gold" />
-                  <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Détails Sportifs</h4>
-               </div>
-               <div className="grid grid-cols-2 gap-y-6 text-sm">
-                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Catégorie</p><p className="font-bold text-brand-gold text-lg uppercase">{enrollment.category || 'N/A'}</p></div>
-                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Postes</p><p className="font-semibold dark:text-gray-200">{student?.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}</p></div>
-                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Club Actuel</p><p className="font-semibold dark:text-gray-200">{student?.currentClub || 'Libre'}</p></div>
-                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Expérience</p><p className="font-semibold dark:text-gray-200">{student?.yearsOfPractice} ans</p></div>
-               </div>
-            </div>
+                    <div className="p-6 bg-red-50/50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
+                        <div className="flex items-center gap-3 mb-4">
+                          <ShieldAlert size={18} className="text-red-500" />
+                          <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider text-red-600 dark:text-red-400">Contact d'Urgence</h4>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                              <p className="text-sm font-bold dark:text-white">{student?.emergencyContactName || 'Non renseigné'}</p>
+                              <a href={`tel:${student?.emergencyContactPhone}`} className="text-sm font-bold text-red-600 dark:text-red-400 hover:underline">
+                                {student?.emergencyContactPhone}
+                              </a>
+                          </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* Sportive Details */}
+                  <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Trophy size={18} className="text-brand-gold" />
+                        <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Détails Sportifs</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-y-6 text-sm">
+                        <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Catégorie</p><p className="font-bold text-brand-gold text-lg uppercase">{enrollment.category || 'N/A'}</p></div>
+                        <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Postes</p><p className="font-semibold dark:text-gray-200">{student?.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}</p></div>
+                        <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Club Actuel</p><p className="font-semibold dark:text-gray-200">{student?.currentClub || 'Libre'}</p></div>
+                        <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Expérience</p><p className="font-semibold dark:text-gray-200">{student?.yearsOfPractice} ans</p></div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'scolaire' && (
+                <motion.div key="scolaire" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                  {/* Academic Stats Dashboard */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800/30">
+                      <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Moyenne Générale</p>
+                      <p className="text-3xl font-display font-bold text-indigo-600 dark:text-indigo-400">{academicStats?.average || 'N/A'}<span className="text-sm ml-1 text-gray-400">/20</span></p>
+                    </div>
+                    <div className="p-6 bg-brand-gold/10 rounded-3xl border border-brand-gold/20">
+                      <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest mb-1">Séquences Évaluées</p>
+                      <p className="text-3xl font-display font-bold text-brand-gold">{academicStats?.totalEvals || 0}</p>
+                    </div>
+                    <div className="p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl border border-emerald-100 dark:border-emerald-800/30">
+                      <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Progression</p>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp size={20} className="text-emerald-500" />
+                        <p className="text-3xl font-display font-bold text-emerald-600 dark:text-emerald-400">+0.5</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Evaluations History */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Historique des Bulletins</h4>
+                      <div className="flex gap-2">
+                        <button className="p-2 text-gray-400 hover:text-brand-gold transition-colors"><Filter size={16} /></button>
+                        <button onClick={() => onAcademicEval(enrollment)} className="flex items-center gap-1 text-[10px] font-bold text-brand-gold uppercase tracking-widest hover:underline">
+                          <Plus size={12} /> Nouvelle Évaluation
+                        </button>
+                      </div>
+                    </div>
+
+                    {loadingEvals ? (
+                      <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-brand-gold" /></div>
+                    ) : evaluations.length === 0 ? (
+                      <div className="p-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-3xl text-gray-400">
+                        Aucune évaluation enregistrée pour cette année académique.
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {evaluations.map((ev: any) => (
+                          <div key={ev.id} className="bg-white dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
+                            <div className="p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-brand-gold/10 flex items-center justify-center text-brand-gold font-bold">
+                                  {ev.sequence.charAt(ev.sequence.length - 1)}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold dark:text-white">{ev.sequence}</p>
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(ev.createdAt).toLocaleDateString('fr-FR')}</p>
+                                </div>
+                              </div>
+                              <button className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all">
+                                <Download size={16} />
+                              </button>
+                            </div>
+                            <div className="p-5">
+                              <table className="w-full text-left">
+                                <thead>
+                                  <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                    <th className="pb-3">Matière</th>
+                                    <th className="pb-3 text-center">Note</th>
+                                    <th className="pb-3 text-center">Coef</th>
+                                    <th className="pb-3 text-right">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                                  {ev.grades?.map((g: any) => (
+                                    <tr key={g.id} className="text-sm">
+                                      <td className="py-3 font-medium dark:text-gray-300">{g.subject}</td>
+                                      <td className="py-3 text-center font-bold text-brand-blue dark:text-brand-gold">{g.score}/20</td>
+                                      <td className="py-3 text-center text-gray-400">{g.coefficient}</td>
+                                      <td className="py-3 text-right font-bold dark:text-white">{(Number(g.score) * Number(g.coefficient)).toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {ev.behaviorComment && (
+                                <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/30">
+                                  <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                    <UserCheck size={12} /> Observation Comportement
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-300 italic">"{ev.behaviorComment}"</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'sportif' && (
+                <motion.div key="sportif" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-full flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-6">
+                    <Star className="w-10 h-10 text-amber-500 animate-pulse" />
+                  </div>
+                  <h3 className="text-2xl font-display font-bold dark:text-white mb-2">Suivi Sportif (Beta)</h3>
+                  <p className="text-gray-500 max-w-sm">Le module d'analyse technique et physique sera bientôt disponible avec des graphiques de progression détaillés.</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         {/* Footer - Static */}
         <div className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-950">
-          <div className="max-w-4xl mx-auto w-full grid grid-cols-2 gap-4">
-            <button 
-              onClick={() => onAcademicEval(enrollment)}
-              className="flex items-center justify-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 dark:border-indigo-800/30"
-            >
-              <ClipboardList size={18} /> Évaluation Scolaire
-            </button>
-            <button className="flex items-center justify-center gap-2 p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl font-bold text-sm hover:bg-amber-100 transition-all border border-amber-100 dark:border-amber-800/30">
-              <Star size={18} /> Évaluation Sportive
-            </button>
+          <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
+            <p className="text-xs text-gray-400 font-medium italic">
+              Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={onClose} className="px-6 py-3 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                Fermer
+              </button>
+              {activeTab === 'infos' && (
+                <button onClick={() => onEdit(enrollment)} className="px-8 py-3 bg-brand-blue dark:bg-brand-gold text-white dark:text-brand-blue rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-all">
+                  Modifier le dossier
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
+    </>
+  );
+};
                 </div>
                 <div className="flex justify-between items-center">
                    <div>

@@ -19,9 +19,9 @@ const STEPS = [
   { id: 6, label: 'Finance', short: 'Finance' },
 ];
 
-interface Props { 
-  onClose: () => void; 
-  onSuccess: () => void; 
+interface Props {
+  onClose: () => void;
+  onSuccess: () => void;
   initialData?: any;
   studentId?: number;
 }
@@ -79,7 +79,7 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
         // Update existing student
         const { student } = await api.students.update(studentId, formData);
         currentStudent = student;
-        
+
         // Find existing enrollment for this year or create if missing
         const { enrollments: studentEnrollments } = await api.enrollments.list({ studentId, academicYear: getCurrentAcademicYear() });
         if (studentEnrollments && studentEnrollments.length > 0) {
@@ -96,7 +96,7 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
         // 1. Create student
         const { student } = await api.students.create(formData);
         currentStudent = student;
-  
+
         // 2. Create enrollment
         const { enrollment } = await api.enrollments.create({
           studentId: student.id,
@@ -150,7 +150,7 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed top-[80px] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
+        className="fixed top-[80px] max-h-[calc(100vh-110px)] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
 
         {/* Header - Static */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
@@ -168,7 +168,7 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
                 <button onClick={() => s.id <= step && setStep(s.id)}
                   className={cn("flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                     step === s.id ? "bg-brand-gold text-brand-blue" :
-                    s.id < step ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-400")}>
+                      s.id < step ? "text-green-600 bg-green-50 dark:bg-green-900/20" : "text-gray-400")}>
                   {s.id < step ? <CheckCircle2 className="w-3 h-3" /> : <span>{s.id}</span>}
                   <span className="hidden sm:inline">{s.short}</span>
                 </button>
