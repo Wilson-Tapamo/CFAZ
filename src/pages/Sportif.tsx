@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Trophy, Dumbbell, Activity, AlertTriangle, Users, Flame, Clock, TrendingUp,
-  Loader2, Calendar, Heart
+  Loader2, Calendar, Heart, User, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,9 @@ import { api, getCurrentAcademicYear } from '@/lib/api';
 import TrainingTab from '@/components/sport/TrainingTab';
 import PhysicalTestsTab from '@/components/sport/PhysicalTestsTab';
 import InjuriesTab from '@/components/sport/InjuriesTab';
+import {
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
+} from 'recharts';
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: Trophy },
@@ -21,17 +24,18 @@ const TABS = [
 export default function Sportif() {
   const [tab, setTab] = useState('dashboard');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const catParam = categoryFilter !== 'all' ? categoryFilter : undefined;
 
   const { data, isLoading: loading, refetch: fetchAll } = useQuery({
-    queryKey: ['sportData', catParam],
+    queryKey: ['sportData', catParam, selectedStudentId],
     queryFn: async () => {
       const [enrData, sessData, testsData, injData, statsData] = await Promise.all([
         api.enrollments.list(),
         api.training.list({ category: catParam }),
         api.physicalTests.list({ category: catParam }),
         api.injuries.list({ category: catParam }),
-        api.sportStats.get({ category: catParam }),
+        api.sportStats.get({ category: catParam, studentId: selectedStudentId || undefined }),
       ]);
       return {
         enrollments: enrData.enrollments,
@@ -48,6 +52,31 @@ export default function Sportif() {
   const tests = data?.tests || [];
   const injuriesList = data?.injuriesList || [];
   const stats = data?.stats || null;
+
+  // Radar Data preparation
+  const radarData = useMemo(() => {
+    if (!stats?.teamAverages) return [];
+    
+    const p = stats.playerLatest || {};
+    const t = stats.teamAverages || {};
+
+    // Helper to normalize/invert metrics where lower is better (Sprint, Agility)
+    // We'll use a simple 0-100 scale for visualization purposes
+    const getVal = (val: any, isInverse = false) => {
+      if (val === null || val === undefined) return 0;
+      if (isInverse) return Math.max(0, 100 - (val * 10)); // Rough inversion for 3-10s range
+      return val;
+    };
+
+    return [
+      { subject: 'Vitesse', A: getVal(t.avgSprint, true), B: getVal(p.sprint30m, true), fullMark: 100 },
+      { subject: 'Endurance', A: getVal(t.avgYoyo) * 5, B: getVal(p.yoyoTest) * 5, fullMark: 100 },
+      { subject: 'Détente', A: getVal(t.avgJump), B: getVal(p.verticalJump), fullMark: 100 },
+      { subject: 'Agilité', A: getVal(t.avgAgility, true), B: getVal(p.agility, true), fullMark: 100 },
+      { subject: 'Force', A: getVal(t.avgStrength), B: getVal(p.strength), fullMark: 100 },
+      { subject: 'VMA', A: getVal(t.avgVma) * 5, B: getVal(p.vma) * 5, fullMark: 100 },
+    ];
+  }, [stats]);
 
   const activeInjuries = injuriesList.filter((i: any) => !(i.injury || i).dateReturn);
 
@@ -214,6 +243,90 @@ export default function Sportif() {
                         <p className="text-xs text-emerald-500 font-bold">Tous aptes !</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Comparison Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Player Selector & Summary */}
+                <div className="lg:col-span-1 space-y-6">
+                  <div className="bg-white dark:bg-gray-900 p-6 rounded-[32px] border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <User size={16} className="text-brand-gold" /> Sélection Joueur
+                    </h4>
+                    <div className="relative">
+                      <select 
+                        value={selectedStudentId || ''} 
+                        onChange={e => setSelectedStudentId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl text-sm font-bold dark:text-white outline-none appearance-none border border-transparent focus:border-brand-gold transition-all"
+                      >
+                        <option value="">Sélectionner un joueur...</option>
+                        {enrollments.map((e: any) => (
+                          <option key={e.id} value={e.studentId}>{e.student?.fullName}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {selectedStudentId && stats?.playerLatest ? (
+                      <div className="mt-6 p-4 bg-brand-gold/5 rounded-2xl border border-brand-gold/10">
+                        <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest mb-2">Dernier test enregistré</p>
+                        <p className="text-xs font-bold dark:text-white">{stats.playerLatest.date}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="p-2 bg-white dark:bg-gray-800 rounded-lg">
+                            <p className="text-[8px] text-gray-400 uppercase">VMA</p>
+                            <p className="text-sm font-bold text-brand-gold">{stats.playerLatest.vma || '--'} <span className="text-[8px]">km/h</span></p>
+                          </div>
+                          <div className="p-2 bg-white dark:bg-gray-800 rounded-lg">
+                            <p className="text-[8px] text-gray-400 uppercase">Sprint</p>
+                            <p className="text-sm font-bold text-brand-gold">{stats.playerLatest.sprint30m || '--'} <span className="text-[8px]">s</span></p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-6 p-8 text-center border-2 border-dashed border-gray-50 dark:border-gray-800 rounded-2xl">
+                        <p className="text-xs text-gray-400">Sélectionnez un joueur pour comparer ses performances à la moyenne de l'équipe.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Radar Chart */}
+                <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-6 rounded-[32px] border border-gray-100 dark:border-gray-800 shadow-sm min-h-[400px] flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Profil de Performance</h4>
+                    <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+                      <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-gray-300"></div> Équipe</div>
+                      <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-brand-gold"></div> Joueur</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 w-full min-h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                        <PolarGrid stroke="#e5e7eb" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 'bold' }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar
+                          name="Moyenne Équipe"
+                          dataKey="A"
+                          stroke="#9ca3af"
+                          fill="#9ca3af"
+                          fillOpacity={0.2}
+                        />
+                        <Radar
+                          name="Joueur"
+                          dataKey="B"
+                          stroke="#EAB308"
+                          fill="#EAB308"
+                          fillOpacity={0.5}
+                        />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
