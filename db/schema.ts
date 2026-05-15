@@ -128,3 +128,51 @@ export const grades = pgTable('grades', {
   coefficient: integer('coefficient').default(1).notNull(),
 });
 
+// ─── Training Sessions ───────────────────────────────────
+// Charge = durée × RPE (méthode Foster)
+export const trainingSessions = pgTable('training_sessions', {
+  id: serial('id').primaryKey(),
+  enrollmentId: integer('enrollment_id').references(() => enrollments.id).notNull(),
+  studentId: integer('student_id').references(() => students.id).notNull(),
+  date: varchar('date', { length: 20 }).notNull(),
+  duration: integer('duration').notNull(), // minutes
+  rpe: integer('rpe').notNull(), // 1-10 (Rate of Perceived Exertion)
+  load: integer('load').notNull(), // duration × rpe
+  type: varchar('type', { length: 50 }).notNull().default('entrainement'), // entrainement, match, physique, technique, tactique
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ─── Physical Tests ──────────────────────────────────────
+export const physicalTests = pgTable('physical_tests', {
+  id: serial('id').primaryKey(),
+  enrollmentId: integer('enrollment_id').references(() => enrollments.id).notNull(),
+  studentId: integer('student_id').references(() => students.id).notNull(),
+  date: varchar('date', { length: 20 }).notNull(),
+  // Tests physiques standards centres de formation
+  sprint30m: doublePrecision('sprint_30m'), // secondes
+  yoyoTest: doublePrecision('yoyo_test'), // palier atteint (Yo-Yo Intermittent Recovery Test)
+  verticalJump: doublePrecision('vertical_jump'), // cm (détente verticale)
+  agility: doublePrecision('agility'), // secondes (T-test ou Illinois)
+  strength: doublePrecision('strength'), // kg (1RM squat ou estimation)
+  vma: doublePrecision('vma'), // km/h (Vitesse Maximale Aérobie)
+  jonglerie: integer('jonglerie'), // nombre max
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ─── Injuries ────────────────────────────────────────────
+export const injuries = pgTable('injuries', {
+  id: serial('id').primaryKey(),
+  enrollmentId: integer('enrollment_id').references(() => enrollments.id).notNull(),
+  studentId: integer('student_id').references(() => students.id).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // muscle, choc, ligament, fracture, tendinite
+  zone: varchar('zone', { length: 50 }).notNull(), // cuisse, genou, cheville, épaule, dos, pied
+  severity: varchar('severity', { length: 20 }).notNull(), // legere, moderee, grave
+  dateInjury: varchar('date_injury', { length: 20 }).notNull(),
+  dateReturn: varchar('date_return', { length: 20 }), // null = toujours blessé
+  daysOut: integer('days_out'), // jours d'absence
+  treatment: text('treatment'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

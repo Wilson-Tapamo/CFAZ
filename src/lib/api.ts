@@ -164,6 +164,55 @@ export const api = {
       return request<{ reports: any[] }>(`/academic-reports?${query}`);
     },
   },
+
+  // ─── Sport ──────────────────────────────────────────────
+  training: {
+    list: (params?: { enrollmentId?: number; studentId?: number; category?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.enrollmentId) q.set('enrollmentId', String(params.enrollmentId));
+      if (params?.studentId) q.set('studentId', String(params.studentId));
+      if (params?.category) q.set('category', params.category);
+      return request<{ sessions: any[] }>(`/training-sessions?${q}`);
+    },
+    create: (data: any) =>
+      request<{ session: any }>('/training-sessions', { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  physicalTests: {
+    list: (params?: { enrollmentId?: number; studentId?: number; category?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.enrollmentId) q.set('enrollmentId', String(params.enrollmentId));
+      if (params?.studentId) q.set('studentId', String(params.studentId));
+      if (params?.category) q.set('category', params.category);
+      return request<{ tests: any[] }>(`/physical-tests?${q}`);
+    },
+    create: (data: any) =>
+      request<{ test: any }>('/physical-tests', { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  injuries: {
+    list: (params?: { enrollmentId?: number; studentId?: number; category?: string; active?: boolean }) => {
+      const q = new URLSearchParams();
+      if (params?.enrollmentId) q.set('enrollmentId', String(params.enrollmentId));
+      if (params?.studentId) q.set('studentId', String(params.studentId));
+      if (params?.category) q.set('category', params.category);
+      if (params?.active) q.set('active', 'true');
+      return request<{ injuries: any[] }>(`/injuries?${q}`);
+    },
+    create: (data: any) =>
+      request<{ injury: any }>('/injuries', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      request<{ injury: any }>(`/injuries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  },
+
+  sportStats: {
+    get: (params?: { studentId?: number; category?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.studentId) q.set('studentId', String(params.studentId));
+      if (params?.category) q.set('category', params.category);
+      return request<{ teamAverages: any; playerLatest: any; injuryStats: any; weeklyLoad: any }>(`/sport-stats?${q}`);
+    },
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────
