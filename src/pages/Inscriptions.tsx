@@ -346,36 +346,6 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
     </>
   );
 };
-                </div>
-                <div className="flex justify-between items-center">
-                   <div>
-                      <p className="text-sm font-bold dark:text-white">{student?.emergencyContactName || 'Non renseigné'}</p>
-                      <a href={`tel:${student?.emergencyContactPhone}`} className="text-sm font-bold text-red-600 dark:text-red-400 hover:underline">
-                         {student?.emergencyContactPhone}
-                      </a>
-                   </div>
-                </div>
-             </div>
-          </div>
-
-          {/* Sportive Details */}
-          <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-             <div className="flex items-center gap-3 mb-4">
-                <Trophy size={18} className="text-brand-gold" />
-                <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Détails Sportifs</h4>
-             </div>
-             <div className="grid grid-cols-2 gap-y-6 text-sm">
-                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Catégorie</p><p className="font-bold text-brand-gold text-lg uppercase">{enrollment.category || 'N/A'}</p></div>
-                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Postes</p><p className="font-semibold dark:text-gray-200">{student?.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}</p></div>
-                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Club Actuel</p><p className="font-semibold dark:text-gray-200">{student?.currentClub || 'Libre'}</p></div>
-                <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Expérience</p><p className="font-semibold dark:text-gray-200">{student?.yearsOfPractice} ans</p></div>
-             </div>
-          </div>
-        </div>
-      </motion.div>
-    </>
-  );
-};
 
 export default function Inscriptions() {
   const [showWizard, setShowWizard] = useState(false);
