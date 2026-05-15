@@ -130,15 +130,65 @@ export default function AcademicEvaluationModal({ student, enrollment, onClose, 
                 </div>
               </div>
             ) : mode === 'ai' ? (
-              <div className="flex flex-col items-center justify-center text-center py-20 px-8">
-                <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                  <Camera size={40} className="text-indigo-600" />
-                </div>
-                <h3 className="text-xl font-bold dark:text-white mb-2">Fonctionnalité IA bientôt disponible</h3>
-                <p className="text-gray-500 text-sm max-w-xs mb-8">Nous travaillons sur une technologie permettant d'extraire automatiquement les notes d'une photo ou d'une vidéo du bulletin.</p>
-                <button onClick={() => setMode('manual')} className="text-brand-gold font-bold text-sm hover:underline">
-                  Utiliser la saisie manuelle pour le moment
-                </button>
+              <div className="flex flex-col items-center justify-center text-center py-12 px-8">
+                {saving ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-6">
+                      <Loader2 size={40} className="text-indigo-600 animate-spin" />
+                    </div>
+                    <h3 className="text-xl font-bold dark:text-white mb-2">Analyse en cours...</h3>
+                    <p className="text-gray-500 text-sm max-w-xs">Gemini AI extrait les notes et appréciations du bulletin. Cela peut prendre quelques secondes.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-6">
+                      <Camera size={40} className="text-indigo-600" />
+                    </div>
+                    <h3 className="text-xl font-bold dark:text-white mb-2">Scanner le bulletin</h3>
+                    <p className="text-gray-500 text-sm max-w-xs mb-8">Prenez une photo bien nette du bulletin scolaire ou téléchargez une image pour remplir automatiquement le formulaire.</p>
+                    
+                    <label className="bg-indigo-600 text-white font-bold px-8 py-4 rounded-2xl cursor-pointer hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 mb-4">
+                      <Plus size={20} /> Choisir une photo
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          setSaving(true);
+                          setError('');
+                          try {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = async () => {
+                              const base64 = reader.result as string;
+                              const result = await api.ai.extractBulletin(base64);
+                              if (result.grades) {
+                                setGrades(result.grades.map(g => ({
+                                  subject: g.subject,
+                                  score: String(g.score),
+                                  coefficient: String(g.coefficient || 1)
+                                })));
+                              }
+                              if (result.behavior) setBehavior(result.behavior);
+                              setMode('manual');
+                            };
+                          } catch (err: any) {
+                            setError("Échec de l'analyse IA. Veuillez réessayer ou utiliser la saisie manuelle.");
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                      />
+                    </label>
+
+                    <button onClick={() => setMode('manual')} className="text-gray-400 font-bold text-sm hover:underline">
+                      Préférer la saisie manuelle
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-8 pb-12">

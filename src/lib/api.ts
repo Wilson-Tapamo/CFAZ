@@ -205,15 +205,22 @@ export const api = {
       request<{ injury: any }>(`/injuries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   },
 
-  sportStats: {
-    get: (params?: { studentId?: number; category?: string }) => {
-      const q = new URLSearchParams();
-      if (params?.studentId) q.set('studentId', String(params.studentId));
-      if (params?.category) q.set('category', params.category);
-      return request<{ teamAverages: any; playerLatest: any; injuryStats: any; weeklyLoad: any }>(`/sport-stats?${q}`);
+    sportStats: {
+      get: (params?: { studentId?: number; category?: string }) => {
+        const q = new URLSearchParams();
+        if (params?.studentId) q.set('studentId', String(params.studentId));
+        if (params?.category) q.set('category', params.category);
+        return request<{ teamAverages: any; playerLatest: any; injuryStats: any; weeklyLoad: any }>(`/sport-stats?${q}`);
+      },
     },
-  },
-};
+    ai: {
+      extractBulletin: (fileData: string) => 
+        request<{ grades: any[]; behavior?: string }>('/ai/extract-bulletin', {
+          method: 'POST',
+          body: JSON.stringify({ fileData }),
+        }),
+    }
+  };
 
 // ─── Helpers ──────────────────────────────────────────────
 export function getCurrentAcademicYear(): string {
