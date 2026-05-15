@@ -4,6 +4,7 @@ import {
   Loader2, Calendar, Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { api, getCurrentAcademicYear } from '@/lib/api';
 import TrainingTab from '@/components/sport/TrainingTab';
@@ -20,17 +21,11 @@ const TABS = [
 export default function Sportif() {
   const [tab, setTab] = useState('dashboard');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [tests, setTests] = useState<any[]>([]);
-  const [injuriesList, setInjuriesList] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const catParam = categoryFilter !== 'all' ? categoryFilter : undefined;
 
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      const catParam = categoryFilter !== 'all' ? categoryFilter : undefined;
+  const { data, isLoading: loading, refetch: fetchAll } = useQuery({
+    queryKey: ['sportData', catParam],
+    queryFn: async () => {
       const [enrData, sessData, testsData, injData, statsData] = await Promise.all([
         api.enrollments.list(),
         api.training.list({ category: catParam }),
@@ -38,16 +33,21 @@ export default function Sportif() {
         api.injuries.list({ category: catParam }),
         api.sportStats.get({ category: catParam }),
       ]);
-      setEnrollments(enrData.enrollments);
-      setSessions(sessData.sessions);
-      setTests(testsData.tests);
-      setInjuriesList(injData.injuries);
-      setStats(statsData);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+      return {
+        enrollments: enrData.enrollments,
+        sessions: sessData.sessions,
+        tests: testsData.tests,
+        injuriesList: injData.injuries,
+        stats: statsData,
+      };
+    },
+  });
 
-  useEffect(() => { fetchAll(); }, [categoryFilter]);
+  const enrollments = data?.enrollments || [];
+  const sessions = data?.sessions || [];
+  const tests = data?.tests || [];
+  const injuriesList = data?.injuriesList || [];
+  const stats = data?.stats || null;
 
   const activeInjuries = injuriesList.filter((i: any) => !(i.injury || i).dateReturn);
 

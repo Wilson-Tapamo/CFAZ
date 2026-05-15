@@ -4,6 +4,7 @@ import {
   ChevronRight, X, Loader2, Trophy, BookOpen, Download, UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 
@@ -145,27 +146,19 @@ const StudentDetail = ({ student, onClose }: { student: any; onClose: () => void
 };
 
 export default function Eleves() {
-  const [students, setStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
-  const fetchStudents = async () => {
-    setIsLoading(true);
-    try {
+  const { data: studentsData, isLoading } = useQuery({
+    queryKey: ['studentsData'],
+    queryFn: async () => {
       const data = await api.students.list();
-      setStudents(data.students);
-    } catch (error) {
-      console.error('Failed to fetch students:', error);
-    } finally {
-      setIsLoading(false);
+      return data.students;
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+  const students = studentsData || [];
 
   const filteredStudents = useMemo(() => {
     return students.filter(s => {

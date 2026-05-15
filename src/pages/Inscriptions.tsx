@@ -5,6 +5,7 @@ import {
   UserCheck, ClipboardList, Star, ChevronRight, TrendingUp, Edit3, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { api, formatCFA, getCurrentAcademicYear } from '@/lib/api';
 import InscriptionWizard from '@/components/inscription/InscriptionWizard';
@@ -349,8 +350,6 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
 
 export default function Inscriptions() {
   const [showWizard, setShowWizard] = useState(false);
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
   
@@ -367,16 +366,15 @@ export default function Inscriptions() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [academicYearFilter, setAcademicYearFilter] = useState(getCurrentAcademicYear());
 
-  const fetchEnrollments = async () => {
-    setIsLoading(true);
-    try {
+  const { data: enrollmentsData, isLoading } = useQuery({
+    queryKey: ['enrollmentsData'],
+    queryFn: async () => {
       const data = await api.enrollments.list();
-      setEnrollments(data.enrollments);
-    } catch (error) { console.error(error); }
-    finally { setIsLoading(false); }
-  };
+      return data.enrollments;
+    }
+  });
 
-  useEffect(() => { fetchEnrollments(); }, []);
+  const enrollments = enrollmentsData || [];
 
   const filteredEnrollments = useMemo(() => {
     return enrollments.filter(e => {

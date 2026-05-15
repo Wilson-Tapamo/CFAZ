@@ -4,35 +4,28 @@ import {
   Users, Award, ChevronRight, Loader2, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { api, getCurrentAcademicYear } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export default function Scolaire() {
-  const [stats, setStats] = useState<any>(null);
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [academicYear] = useState(getCurrentAcademicYear());
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [statsData, reportsData] = await Promise.all([
-          api.evaluations.stats(academicYear),
-          api.evaluations.reports({ academicYear, category: categoryFilter })
-        ]);
-        setStats(statsData);
-        setReports(reportsData.reports);
-      } catch (error) {
-        console.error('Error fetching academic data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [academicYear, categoryFilter]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['scolaireData', academicYear, categoryFilter],
+    queryFn: async () => {
+      const [statsData, reportsData] = await Promise.all([
+        api.evaluations.stats(academicYear),
+        api.evaluations.reports({ academicYear, category: categoryFilter })
+      ]);
+      return { stats: statsData, reports: reportsData.reports };
+    }
+  });
+
+  const stats = data?.stats || null;
+  const reports = data?.reports || [];
 
   const filteredReports = reports.filter(r => 
     r.full_name.toLowerCase().includes(search.toLowerCase())
