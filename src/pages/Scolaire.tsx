@@ -1,17 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   BookOpen, GraduationCap, TrendingUp, Search, Filter, 
-  Users, Award, ChevronRight, Loader2, Calendar
+  Users, Award, ChevronRight, Loader2, Calendar, Download, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { api, getCurrentAcademicYear } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { generateBulletinPDF } from '@/lib/pdfGenerator';
 
 export default function Scolaire() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [academicYear] = useState(getCurrentAcademicYear());
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  const handleDownload = async (report: any) => {
+    setDownloadingId(report.enrollment_id);
+    try {
+      const data = await api.evaluations.list({ enrollmentId: report.enrollment_id });
+      if (data.evaluations.length === 0) {
+        alert("Aucune évaluation trouvée pour cet élève.");
+        return;
+      }
+      await generateBulletinPDF(report, data.evaluations);
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de la génération du bulletin.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const { data, isLoading: loading } = useQuery({
     queryKey: ['scolaireData', academicYear, categoryFilter],
@@ -145,7 +164,7 @@ export default function Scolaire() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filteredReports.map((report) => (
+                {filteredReports.map((report, index) => (
                   <tr key={report.enrollment_id} className="group hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all cursor-pointer">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
@@ -156,7 +175,12 @@ export default function Scolaire() {
                         </div>
                         <div>
                           <p className="text-sm font-bold dark:text-white group-hover:text-brand-gold transition-colors">{report.full_name}</p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">#{report.student_id}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">#{report.student_id}</span>
+                            <span className="text-[9px] bg-brand-gold/10 text-brand-gold px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest">
+                              {index + 1}{index === 0 ? 'er' : 'ème'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -184,9 +208,23 @@ export default function Scolaire() {
                        <span className="text-xs font-bold dark:text-gray-400">{report.evaluation_count}</span>
                     </td>
                     <td className="px-8 py-5 text-right">
-                       <button className="p-2 text-gray-300 hover:text-brand-gold hover:bg-brand-gold/10 rounded-lg transition-all">
-                          <ChevronRight size={20} />
-                       </button>
+                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button 
+                           onClick={(e) => { e.stopPropagation(); handleDownload(report); }}
+                           disabled={downloadingId === report.enrollment_id}
+                           className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-brand-gold hover:text-brand-blue hover:border-brand-gold transition-all disabled:opacity-50"
+                         >
+                           {downloadingId === report.enrollment_id ? (
+                             <Loader2 size={14} className="animate-spin" />
+                           ) : (
+                             <FileText size={14} />
+                           )}
+                           Bulletin PDF
+                         </button>
+                         <button className="p-2 text-gray-300 hover:text-brand-gold hover:bg-brand-gold/10 rounded-lg transition-all">
+                            <ChevronRight size={20} />
+                         </button>
+                       </div>
                     </td>
                   </tr>
                 ))}
