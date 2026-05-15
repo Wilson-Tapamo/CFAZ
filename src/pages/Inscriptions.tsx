@@ -47,10 +47,10 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150]" />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed top-[80px] inset-x-0 bottom-0 lg:left-auto lg:right-0 lg:inset-y-0 w-full lg:max-w-2xl bg-white dark:bg-gray-950 z-[160] shadow-2xl flex flex-col">
+        className="fixed top-[80px] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-gray-950 z-[160] shadow-2xl flex flex-col">
         
-        {/* Header */}
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white/80 dark:bg-gray-950/80 backdrop-blur-md sticky top-0 z-10">
+        {/* Header - Static */}
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 font-bold text-2xl overflow-hidden border border-indigo-100 dark:border-indigo-800">
               {student?.photo ? (
@@ -75,10 +75,88 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8">
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 lg:p-12 space-y-8">
+          <div className="max-w-4xl mx-auto w-full space-y-8">
+            {/* Scolarité Quick View */}
+            <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/10 dark:to-blue-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-800/30">
+               <div className="flex items-center gap-3 mb-4">
+                  <BookOpen size={18} className="text-indigo-600" />
+                  <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Académique</h4>
+               </div>
+               <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Établissement</p>
+                    <p className="text-sm font-bold dark:text-white">{student?.school}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Classe / Niveau</p>
+                    <p className="text-sm font-bold dark:text-white">{student?.classLevel}</p>
+                  </div>
+               </div>
+            </div>
+
+            {/* Contacts Section */}
+            <div className="space-y-4">
+               <div className="p-6 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3 mb-4">
+                     <Phone size={18} className="text-brand-gold" />
+                     <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Contacts Parent / Tuteur</h4>
+                  </div>
+                  <div className="space-y-4">
+                     <div className="flex justify-between items-start">
+                        <div>
+                           <p className="text-sm font-bold dark:text-white">{student?.parentName}</p>
+                           <p className="text-xs text-gray-500">{student?.parentProfession}</p>
+                        </div>
+                        <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-bold uppercase">{student?.parentRelation}</span>
+                     </div>
+                     <div className="flex flex-col gap-2">
+                        <a href={`tel:${student?.parentPhone}`} className="flex items-center gap-2 text-sm font-medium text-brand-blue dark:text-brand-gold hover:underline">
+                           <Phone size={14} /> {student?.parentPhone}
+                        </a>
+                        {student?.parentEmail && (
+                          <p className="text-xs text-gray-400">{student.parentEmail}</p>
+                        )}
+                     </div>
+                  </div>
+               </div>
+
+               <div className="p-6 bg-red-50/50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
+                  <div className="flex items-center gap-3 mb-4">
+                     <ShieldAlert size={18} className="text-red-500" />
+                     <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider text-red-600 dark:text-red-400">Contact d'Urgence</h4>
+                  </div>
+                  <div className="flex justify-between items-center">
+                     <div>
+                        <p className="text-sm font-bold dark:text-white">{student?.emergencyContactName || 'Non renseigné'}</p>
+                        <a href={`tel:${student?.emergencyContactPhone}`} className="text-sm font-bold text-red-600 dark:text-red-400 hover:underline">
+                           {student?.emergencyContactPhone}
+                        </a>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* Sportive Details */}
+            <div className="p-6 bg-white dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+               <div className="flex items-center gap-3 mb-4">
+                  <Trophy size={18} className="text-brand-gold" />
+                  <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Détails Sportifs</h4>
+               </div>
+               <div className="grid grid-cols-2 gap-y-6 text-sm">
+                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Catégorie</p><p className="font-bold text-brand-gold text-lg uppercase">{enrollment.category || 'N/A'}</p></div>
+                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Postes</p><p className="font-semibold dark:text-gray-200">{student?.positions ? JSON.parse(student.positions).join(', ') : 'N/A'}</p></div>
+                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Club Actuel</p><p className="font-semibold dark:text-gray-200">{student?.currentClub || 'Libre'}</p></div>
+                  <div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Expérience</p><p className="font-semibold dark:text-gray-200">{student?.yearsOfPractice} ans</p></div>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer - Static */}
+        <div className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-950">
+          <div className="max-w-4xl mx-auto w-full grid grid-cols-2 gap-4">
             <button 
               onClick={() => onAcademicEval(enrollment)}
               className="flex items-center justify-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 dark:border-indigo-800/30"
@@ -89,55 +167,8 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
               <Star size={18} /> Évaluation Sportive
             </button>
           </div>
-
-          {/* Scolarité Quick View */}
-          <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/10 dark:to-blue-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-800/30">
-             <div className="flex items-center gap-3 mb-4">
-                <BookOpen size={18} className="text-indigo-600" />
-                <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Parcours Académique</h4>
-             </div>
-             <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Établissement</p>
-                  <p className="text-sm font-bold dark:text-white">{student?.school}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Classe / Niveau</p>
-                  <p className="text-sm font-bold dark:text-white">{student?.classLevel}</p>
-                </div>
-             </div>
-          </div>
-
-          {/* Contacts Section */}
-          <div className="space-y-4">
-             <div className="p-6 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-3 mb-4">
-                   <Phone size={18} className="text-brand-gold" />
-                   <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Contacts Parent / Tuteur</h4>
-                </div>
-                <div className="space-y-4">
-                   <div className="flex justify-between items-start">
-                      <div>
-                         <p className="text-sm font-bold dark:text-white">{student?.parentName}</p>
-                         <p className="text-xs text-gray-500">{student?.parentProfession}</p>
-                      </div>
-                      <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-bold uppercase">{student?.parentRelation}</span>
-                   </div>
-                   <div className="flex flex-col gap-2">
-                      <a href={`tel:${student?.parentPhone}`} className="flex items-center gap-2 text-sm font-medium text-brand-blue dark:text-brand-gold hover:underline">
-                         <Phone size={14} /> {student?.parentPhone}
-                      </a>
-                      {student?.parentEmail && (
-                        <p className="text-xs text-gray-400">{student.parentEmail}</p>
-                      )}
-                   </div>
-                </div>
-             </div>
-
-             <div className="p-6 bg-red-50/50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
-                <div className="flex items-center gap-3 mb-4">
-                   <ShieldAlert size={18} className="text-red-500" />
-                   <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider text-red-600 dark:text-red-400">Contact d'Urgence</h4>
+        </div>
+      </motion.div>
                 </div>
                 <div className="flex justify-between items-center">
                    <div>

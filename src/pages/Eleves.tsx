@@ -21,14 +21,14 @@ const StudentDetail = ({ student, onClose }: { student: any; onClose: () => void
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150]" 
       />
       <motion.div 
-        initial={{ y: '100%' }} 
-        animate={{ y: 0 }} 
-        exit={{ y: '100%' }}
+        initial={{ x: '100%' }} 
+        animate={{ x: 0 }} 
+        exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed top-[80px] inset-x-0 bottom-0 lg:left-auto lg:right-0 lg:inset-y-0 w-full lg:max-w-[480px] bg-white dark:bg-gray-900 z-[160] shadow-2xl flex flex-col"
+        className="fixed top-[80px] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-gray-900 z-[160] shadow-2xl flex flex-col"
       >
-        {/* Header */}
-        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-10">
+        {/* Header - Static */}
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-brand-gold/10 flex items-center justify-center text-brand-gold font-bold text-xl">
               {student.fullName?.charAt(0)}
@@ -45,8 +45,9 @@ const StudentDetail = ({ student, onClose }: { student: any; onClose: () => void
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-12">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 lg:p-12">
+          <div className="max-w-4xl mx-auto w-full space-y-8">
           {/* Main Info Grid */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1">
@@ -135,6 +136,7 @@ const StudentDetail = ({ student, onClose }: { student: any; onClose: () => void
              </div>
              <p className="text-xs text-gray-500 mb-1">{student.parentProfession}</p>
              <p className="text-sm font-medium dark:text-gray-300">{student.parentPhone}</p>
+            </div>
           </div>
         </div>
       </motion.div>

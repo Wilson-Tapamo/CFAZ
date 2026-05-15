@@ -150,9 +150,9 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed top-[80px] inset-x-0 bottom-0 lg:left-auto lg:right-0 lg:inset-y-0 w-full lg:max-w-4xl bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
+        className="fixed top-[80px] lg:top-0 inset-x-0 bottom-0 bg-white dark:bg-[#0a0a0a] z-[110] shadow-2xl flex flex-col">
 
-        {/* Header */}
+        {/* Header - Static */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-display font-bold dark:text-white">Nouvelle Inscription</h2>
@@ -180,52 +180,56 @@ export default function InscriptionWizard({ onClose, onSuccess, initialData, stu
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8">
-          {success ? (
-            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center justify-center h-full text-center">
-              <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle2 className="w-10 h-10 text-green-600" />
-              </div>
-              <h3 className="text-2xl font-display font-bold dark:text-white mb-2">Inscription Réussie !</h3>
-              <p className="text-gray-500">Le dossier a été enregistré avec succès.</p>
-            </motion.div>
-          ) : (
-            <AnimatePresence mode="wait">
-              {step === 1 && <StepPersonalInfo key="s1" data={formData} onChange={onChange} />}
-              {step === 2 && <StepParentInfo key="s2" data={formData} onChange={onChange} />}
-              {step === 3 && <StepSchoolInfo key="s3" data={formData} onChange={onChange} />}
-              {step === 4 && <StepSportInfo key="s4" data={formData} onChange={onChange} />}
-              {step === 5 && <StepDocuments key="s5" uploadedDocs={uploadedDocs} onUpload={handleDocUpload} onRemove={handleDocRemove} />}
-              {step === 6 && <StepFinance key="s6" payments={localPayments} onAddPayment={handleAddPayment} />}
-            </AnimatePresence>
-          )}
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 lg:p-12">
+          <div className="max-w-4xl mx-auto w-full">
+            {success ? (
+              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
+                  <CheckCircle2 className="w-10 h-10 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-display font-bold dark:text-white mb-2">Inscription Réussie !</h3>
+                <p className="text-gray-500">Le dossier a été enregistré avec succès.</p>
+              </motion.div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {step === 1 && <StepPersonalInfo key="s1" data={formData} onChange={onChange} />}
+                {step === 2 && <StepParentInfo key="s2" data={formData} onChange={onChange} />}
+                {step === 3 && <StepSchoolInfo key="s3" data={formData} onChange={onChange} />}
+                {step === 4 && <StepSportInfo key="s4" data={formData} onChange={onChange} />}
+                {step === 5 && <StepDocuments key="s5" uploadedDocs={uploadedDocs} onUpload={handleDocUpload} onRemove={handleDocRemove} />}
+                {step === 6 && <StepFinance key="s6" payments={localPayments} onAddPayment={handleAddPayment} />}
+              </AnimatePresence>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer - Static */}
         {!success && (
-          <div className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0">
-            {error && <p className="text-red-500 text-sm mb-3 font-medium">{error}</p>}
-            <div className="flex items-center gap-3">
-              {step > 1 && (
-                <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-white transition-all">
-                  <ChevronLeft className="w-4 h-4" /> Retour
-                </button>
-              )}
-              <div className="flex-1" />
-              {step < 6 ? (
-                <button onClick={() => canProceed() && setStep(s => s + 1)} disabled={!canProceed()}
-                  className={cn("flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg",
-                    canProceed() ? "bg-brand-blue dark:bg-brand-gold text-white dark:text-brand-blue hover:shadow-xl active:scale-[0.98]" : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
-                  Suivant <ChevronRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl active:scale-[0.98] transition-all disabled:opacity-50">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  {saving ? 'Enregistrement...' : 'Finaliser l\'Inscription'}
-                </button>
-              )}
+          <div className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 bg-white dark:bg-[#0a0a0a]">
+            <div className="max-w-4xl mx-auto w-full">
+              {error && <p className="text-red-500 text-sm mb-3 font-medium">{error}</p>}
+              <div className="flex items-center gap-3">
+                {step > 1 && (
+                  <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-white transition-all">
+                    <ChevronLeft className="w-4 h-4" /> Retour
+                  </button>
+                )}
+                <div className="flex-1" />
+                {step < 6 ? (
+                  <button onClick={() => canProceed() && setStep(s => s + 1)} disabled={!canProceed()}
+                    className={cn("flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg",
+                      canProceed() ? "bg-brand-blue dark:bg-brand-gold text-white dark:text-brand-blue hover:shadow-xl active:scale-[0.98]" : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
+                    Suivant <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl active:scale-[0.98] transition-all disabled:opacity-50">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {saving ? 'Enregistrement...' : 'Finaliser l\'Inscription'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
