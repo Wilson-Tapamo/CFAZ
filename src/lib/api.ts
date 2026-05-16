@@ -215,7 +215,7 @@ export const api = {
     },
     ai: {
       extractBulletin: (fileData: string) => 
-        request<{ grades: any[]; behavior?: string }>('/ai/extract-bulletin', {
+        request<{ grades: any[]; behavior?: string }>('/ai-extract-bulletin', {
           method: 'POST',
           body: JSON.stringify({ fileData }),
         }),
