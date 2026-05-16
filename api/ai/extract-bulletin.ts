@@ -39,6 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       Be precise and only return valid JSON.
     `;
 
+    console.log('Starting Gemini analysis...');
     const result = await model.generateContent([
       prompt,
       {
@@ -49,14 +50,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     ]);
 
-    const text = result.response.text();
-    // Clean potential markdown code blocks
-    const jsonStr = text.replace(/```json|```/g, '').trim();
-    const data = JSON.parse(jsonStr);
+    const response = await result.response;
+    const text = response.text();
+    console.log('Gemini raw response:', text);
+
+    // Robust JSON extraction: find the first { and last }
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('L\'IA n\'a pas renvoyé un format JSON valide.');
+    }
+    
+    const data = JSON.parse(jsonMatch[0]);
+    console.log('Extracted data:', data);
 
     return res.status(200).json(data);
   } catch (error: any) {
-    console.error('AI Extraction error:', error);
-    return res.status(500).json({ error: 'Failed to extract data', details: error.message });
+    console.error('AI Extraction error details:', error);
+    return res.status(500).json({ 
+      error: 'Échec de l\'analyse par l\'IA', 
+      details: error.message,
+      code: error.code || 'UNKNOWN_ERROR'
+    });
   }
 }

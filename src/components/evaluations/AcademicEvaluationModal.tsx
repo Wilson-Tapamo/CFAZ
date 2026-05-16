@@ -147,6 +147,12 @@ export default function AcademicEvaluationModal({ student, enrollment, onClose, 
                     <h3 className="text-xl font-bold dark:text-white mb-2">Scanner le bulletin</h3>
                     <p className="text-gray-500 text-sm max-w-xs mb-8">Prenez une photo bien nette du bulletin scolaire ou téléchargez une image pour remplir automatiquement le formulaire.</p>
                     
+                    {error && (
+                      <div className="flex items-center gap-2 text-red-500 text-xs font-bold mb-6 bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl w-full max-w-md">
+                        <AlertCircle size={14} /> {error}
+                      </div>
+                    )}
+                    
                     <label className="bg-indigo-600 text-white font-bold px-8 py-4 rounded-2xl cursor-pointer hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 mb-4">
                       <Plus size={20} /> Choisir une photo
                       <input 
@@ -164,20 +170,55 @@ export default function AcademicEvaluationModal({ student, enrollment, onClose, 
                             reader.readAsDataURL(file);
                             reader.onload = async () => {
                               const base64 = reader.result as string;
-                              const result = await api.ai.extractBulletin(base64);
-                              if (result.grades) {
-                                setGrades(result.grades.map(g => ({
-                                  subject: g.subject,
-                                  score: String(g.score),
-                                  coefficient: String(g.coefficient || 1)
-                                })));
-                              }
-                              if (result.behavior) setBehavior(result.behavior);
-                              setMode('manual');
+                              
+                              // Compress image before sending (Vercel 4.5MB limit)
+                              const img = new Image();
+                              img.src = base64;
+                              img.onload = async () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX_WIDTH = 1000;
+                                const MAX_HEIGHT = 1000;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                  if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                  }
+                                } else {
+                                  if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                  }
+                                }
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+
+                                try {
+                                  const result = await api.ai.extractBulletin(compressedBase64);
+                                  if (result.grades) {
+                                    setGrades(result.grades.map(g => ({
+                                      subject: g.subject,
+                                      score: String(g.score),
+                                      coefficient: String(g.coefficient || 1)
+                                    })));
+                                  }
+                                  if (result.behavior) setBehavior(result.behavior);
+                                  setMode('manual');
+                                } catch (err: any) {
+                                  console.error("AI Error:", err);
+                                  setError(`Erreur IA : ${err.message || "Échec de l'analyse."}`);
+                                } finally {
+                                  setSaving(false);
+                                }
+                              };
                             };
                           } catch (err: any) {
-                            setError("Échec de l'analyse IA. Veuillez réessayer ou utiliser la saisie manuelle.");
-                          } finally {
+                            setError("Échec de la lecture de l'image. Utilisez la saisie manuelle.");
                             setSaving(false);
                           }
                         }}
