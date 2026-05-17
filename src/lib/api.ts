@@ -29,7 +29,7 @@ export const api = {
         body: JSON.stringify({ email, password }),
       }),
     seed: () =>
-      request<{ message: string; seeded: boolean }>('/seed', { method: 'POST' }),
+      request<{ message: string; seeded: boolean }>('/auth?type=seed', { method: 'POST' }),
   },
 
   // ─── Students ───────────────────────────────────────────
@@ -138,7 +138,7 @@ export const api = {
       const query = new URLSearchParams();
       if (params.studentId) query.set('studentId', String(params.studentId));
       if (params.enrollmentId) query.set('enrollmentId', String(params.enrollmentId));
-      return request<{ evaluations: any[] }>(`/academic-evaluations?${query}`);
+      return request<{ evaluations: any[] }>(`/academic?type=evaluations&${query}`);
     },
 
     create: (data: {
@@ -149,19 +149,19 @@ export const api = {
       behaviorComment?: string;
       grades: { subject: string; score: number | string; coefficient: number | string }[];
     }) =>
-      request<{ evaluation: any }>('/academic-evaluations', {
+      request<{ evaluation: any }>('/academic?type=evaluations', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
     stats: (academicYear?: string) =>
-      request<{ global: any; categories: any[]; topStudents: any[] }>(`/academic-stats${academicYear ? `?academicYear=${academicYear}` : ''}`),
+      request<{ global: any; categories: any[]; topStudents: any[] }>(`/academic?type=stats${academicYear ? `&academicYear=${academicYear}` : ''}`),
 
     reports: (params: { category?: string; academicYear?: string }) => {
       const query = new URLSearchParams();
       if (params.category) query.set('category', params.category);
       if (params.academicYear) query.set('academicYear', params.academicYear);
-      return request<{ reports: any[] }>(`/academic-reports?${query}`);
+      return request<{ reports: any[] }>(`/academic?type=reports&${query}`);
     },
   },
 
@@ -172,10 +172,10 @@ export const api = {
       if (params?.enrollmentId) q.set('enrollmentId', String(params.enrollmentId));
       if (params?.studentId) q.set('studentId', String(params.studentId));
       if (params?.category) q.set('category', params.category);
-      return request<{ sessions: any[] }>(`/training-sessions?${q}`);
+      return request<{ sessions: any[] }>(`/sport?type=training&${q}`);
     },
     create: (data: any) =>
-      request<{ session: any }>('/training-sessions', { method: 'POST', body: JSON.stringify(data) }),
+      request<{ session: any }>('/sport?type=training', { method: 'POST', body: JSON.stringify(data) }),
   },
 
   physicalTests: {
@@ -184,10 +184,10 @@ export const api = {
       if (params?.enrollmentId) q.set('enrollmentId', String(params.enrollmentId));
       if (params?.studentId) q.set('studentId', String(params.studentId));
       if (params?.category) q.set('category', params.category);
-      return request<{ tests: any[] }>(`/physical-tests?${q}`);
+      return request<{ tests: any[] }>(`/sport?type=physical&${q}`);
     },
     create: (data: any) =>
-      request<{ test: any }>('/physical-tests', { method: 'POST', body: JSON.stringify(data) }),
+      request<{ test: any }>('/sport?type=physical', { method: 'POST', body: JSON.stringify(data) }),
   },
 
   injuries: {
@@ -197,30 +197,30 @@ export const api = {
       if (params?.studentId) q.set('studentId', String(params.studentId));
       if (params?.category) q.set('category', params.category);
       if (params?.active) q.set('active', 'true');
-      return request<{ injuries: any[] }>(`/injuries?${q}`);
+      return request<{ injuries: any[] }>(`/sport?type=injuries&${q}`);
     },
     create: (data: any) =>
-      request<{ injury: any }>('/injuries', { method: 'POST', body: JSON.stringify(data) }),
+      request<{ injury: any }>('/sport?type=injuries', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) =>
-      request<{ injury: any }>(`/injuries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      request<{ injury: any }>(`/sport?type=injuries&id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   },
 
-    sportStats: {
-      get: (params?: { studentId?: number; category?: string }) => {
-        const q = new URLSearchParams();
-        if (params?.studentId) q.set('studentId', String(params.studentId));
-        if (params?.category) q.set('category', params.category);
-        return request<{ teamAverages: any; playerLatest: any; injuryStats: any; weeklyLoad: any }>(`/sport-stats?${q}`);
-      },
+  sportStats: {
+    get: (params?: { studentId?: number; category?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.studentId) q.set('studentId', String(params.studentId));
+      if (params?.category) q.set('category', params.category);
+      return request<{ teamAverages: any; playerLatest: any; injuryStats: any; weeklyLoad: any }>(`/sport?type=stats&${q}`);
     },
-    ai: {
-      extractBulletin: (fileData: string) => 
-        request<{ grades: any[]; behavior?: string }>('/ai-extract-bulletin', {
-          method: 'POST',
-          body: JSON.stringify({ fileData }),
-        }),
-    }
-  };
+  },
+  ai: {
+    extractBulletin: (fileData: string) => 
+      request<{ grades: any[]; behavior?: string }>('/ai-extract-bulletin', {
+        method: 'POST',
+        body: JSON.stringify({ fileData }),
+      }),
+  }
+};
 
 // ─── Helpers ──────────────────────────────────────────────
 export function getCurrentAcademicYear(): string {
