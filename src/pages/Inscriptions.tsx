@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { api, formatCFA, getCurrentAcademicYear } from '@/lib/api';
 import InscriptionWizard from '@/components/inscription/InscriptionWizard';
 import AcademicEvaluationModal from '@/components/evaluations/AcademicEvaluationModal';
+import SportEvaluationModal from '@/components/evaluations/SportEvaluationModal';
 
 // --- Components ---
 
@@ -40,12 +41,14 @@ const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
   </motion.div>
 );
 
-const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enrollment: any; onClose: () => void; onEdit: (e: any) => void; onAcademicEval: (e: any) => void }) => {
+const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval, onSportEval }: { enrollment: any; onClose: () => void; onEdit: (e: any) => void; onAcademicEval: (e: any) => void; onSportEval: (e: any) => void }) => {
   if (!enrollment) return null;
   const student = enrollment.student;
   const [activeTab, setActiveTab] = useState<'infos' | 'scolaire' | 'sportif'>('infos');
   const [evaluations, setEvaluations] = useState<any[]>([]);
   const [loadingEvals, setLoadingEvals] = useState(false);
+  const [physicalTests, setPhysicalTests] = useState<any[]>([]);
+  const [loadingTests, setLoadingTests] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'scolaire') {
@@ -58,6 +61,20 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
         finally { setLoadingEvals(false); }
       };
       fetchEvals();
+    }
+  }, [activeTab, enrollment.id]);
+
+  useEffect(() => {
+    if (activeTab === 'sportif') {
+      const fetchTests = async () => {
+        setLoadingTests(true);
+        try {
+          const data = await api.physicalTests.list({ enrollmentId: enrollment.id });
+          setPhysicalTests(data.tests);
+        } catch (error) { console.error(error); }
+        finally { setLoadingTests(false); }
+      };
+      fetchTests();
     }
   }, [activeTab, enrollment.id]);
 
@@ -313,12 +330,68 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
               )}
 
               {activeTab === 'sportif' && (
-                <motion.div key="sportif" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-full flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-6">
-                    <Star className="w-10 h-10 text-amber-500 animate-pulse" />
+                <motion.div key="sportif" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold dark:text-white uppercase tracking-wider">Historique des Tests Physiques</h4>
+                    <button onClick={() => onSportEval(enrollment)} className="flex items-center gap-1 text-[10px] font-bold text-brand-gold uppercase tracking-widest hover:underline">
+                      <Plus size={12} /> Nouveau Test Physique
+                    </button>
                   </div>
-                  <h3 className="text-2xl font-display font-bold dark:text-white mb-2">Suivi Sportif (Beta)</h3>
-                  <p className="text-gray-500 max-w-sm">Le module d'analyse technique et physique sera bientôt disponible avec des graphiques de progression détaillés.</p>
+
+                  {loadingTests ? (
+                    <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-brand-gold" /></div>
+                  ) : physicalTests.length === 0 ? (
+                    <div className="p-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-3xl text-gray-400">
+                      Aucun test physique enregistré pour cette année académique.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {physicalTests.map((t: any) => {
+                        const test = t.test || t;
+                        return (
+                          <div key={test.id} className="bg-white dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 hover:border-brand-gold/30 transition-all">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(test.date).toLocaleDateString('fr-FR')}</p>
+                              </div>
+                              <TrendingUp size={16} className="text-brand-gold" />
+                            </div>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                              {[
+                                { key: 'sprint30m', label: 'Sprint 30m', unit: 's', icon: '⚡' },
+                                { key: 'yoyoTest', label: 'Yo-Yo Test', unit: 'palier', icon: '🫁' },
+                                { key: 'verticalJump', label: 'Détente', unit: 'cm', icon: '🦘' },
+                                { key: 'agility', label: 'Agilité', unit: 's', icon: '🔀' },
+                                { key: 'strength', label: 'Force', unit: 'kg', icon: '💪' },
+                                { key: 'vma', label: 'VMA', unit: 'km/h', icon: '🏃' },
+                                { key: 'jonglerie', label: 'Jonglerie', unit: 'max', icon: '⚽' },
+                              ].map(tf => {
+                                const val = test[tf.key];
+                                if (!val && val !== 0) return (
+                                  <div key={tf.key} className="text-center p-2 bg-gray-50 dark:bg-gray-800/30 rounded-xl opacity-30">
+                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{tf.icon} {tf.label}</p>
+                                    <p className="text-xs font-bold dark:text-white mt-1">--</p>
+                                  </div>
+                                );
+                                return (
+                                  <div key={tf.key} className="text-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{tf.icon} {tf.label}</p>
+                                    <p className="text-xs font-bold text-brand-gold mt-1">{val}</p>
+                                    <p className="text-[8px] text-gray-400">{tf.unit}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {test.notes && (
+                              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-xs text-gray-500 italic">
+                                "{test.notes}"
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -340,6 +413,16 @@ const EnrollmentDetail = ({ enrollment, onClose, onEdit, onAcademicEval }: { enr
                   Modifier le dossier
                 </button>
               )}
+              {activeTab === 'scolaire' && (
+                <button onClick={() => onAcademicEval(enrollment)} className="px-8 py-3 bg-brand-blue dark:bg-brand-gold text-white dark:text-brand-blue rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-all">
+                  Évaluer Scolaire
+                </button>
+              )}
+              {activeTab === 'sportif' && (
+                <button onClick={() => onSportEval(enrollment)} className="px-8 py-3 bg-brand-blue dark:bg-brand-gold text-white dark:text-brand-blue rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-all">
+                  Évaluer Sportif
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -355,6 +438,7 @@ export default function Inscriptions() {
   
   // Evaluation state
   const [showAcademicEval, setShowAcademicEval] = useState(false);
+  const [showSportEval, setShowSportEval] = useState(false);
   const [evalEnrollment, setEvalEnrollment] = useState<any>(null);
   
   // Edit mode state
@@ -366,7 +450,7 @@ export default function Inscriptions() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [academicYearFilter, setAcademicYearFilter] = useState(getCurrentAcademicYear());
 
-  const { data: enrollmentsData, isLoading } = useQuery({
+  const { data: enrollmentsData, isLoading, refetch: fetchEnrollments } = useQuery({
     queryKey: ['enrollmentsData'],
     queryFn: async () => {
       const data = await api.enrollments.list();
@@ -612,6 +696,10 @@ export default function Inscriptions() {
               setEvalEnrollment(e);
               setShowAcademicEval(true);
             }}
+            onSportEval={(e) => {
+              setEvalEnrollment(e);
+              setShowSportEval(true);
+            }}
           />
         )}
         {showAcademicEval && evalEnrollment && (
@@ -619,6 +707,14 @@ export default function Inscriptions() {
             student={evalEnrollment.student}
             enrollment={evalEnrollment}
             onClose={() => { setShowAcademicEval(false); setEvalEnrollment(null); }}
+            onSuccess={() => { fetchEnrollments(); }}
+          />
+        )}
+        {showSportEval && evalEnrollment && (
+          <SportEvaluationModal
+            student={evalEnrollment.student}
+            enrollment={evalEnrollment}
+            onClose={() => { setShowSportEval(false); setEvalEnrollment(null); }}
             onSuccess={() => { fetchEnrollments(); }}
           />
         )}

@@ -11,7 +11,7 @@ import TrainingTab from '@/components/sport/TrainingTab';
 import PhysicalTestsTab from '@/components/sport/PhysicalTestsTab';
 import InjuriesTab from '@/components/sport/InjuriesTab';
 import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip
 } from 'recharts';
 
 const TABS = [
