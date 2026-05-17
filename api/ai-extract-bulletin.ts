@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,64 +11,87 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { fileData } = req.body;
   if (!fileData) return res.status(400).json({ error: 'Missing file data' });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Gemini API key not configured' });
+  // Retrieve Groq API Key from environment variables
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'Groq API key not configured on Vercel' });
+  }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log('Starting Groq vision analysis...');
 
-    // Extract base64 data (strip prefix if present)
+    // Extract base64 data and clean it (strip prefix)
     const base64Data = fileData.split(',')[1] || fileData;
 
     const prompt = `
       Extract the subjects, grades (scores out of 20), and coefficients from this school report card (bulletin scolaire). 
       Also extract the teacher's general comment or behavior observation if present.
       
-      Return ONLY a JSON object with this structure:
+      You MUST return a JSON object with this exact structure:
       {
         "grades": [
-          { "subject": "Mathématiques", "score": 15.5, "coefficient": 2 },
-          ...
+          { "subject": "Mathématiques", "score": 15.5, "coefficient": 2 }
         ],
         "behavior": "L'élève est sérieux et travailleur."
       }
       
-      If a score is not out of 20, convert it to /20. 
-      Be precise and only return valid JSON.
+      Rules:
+      - If a score is not out of 20, convert/normalize it to 20.
+      - Be extremely precise. 
+      - Return ONLY the raw JSON object, nothing else.
     `;
 
-    console.log('Starting Gemini analysis...');
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType: "image/jpeg"
-        }
-      }
-    ]);
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.2-11b-vision-preview',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Data}`
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      })
+    });
 
-    const response = await result.response;
-    const text = response.text();
-    console.log('Gemini raw response:', text);
-
-    // Robust JSON extraction: find the first { and last }
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('L\'IA n\'a pas renvoyé un format JSON valide.');
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Groq API Error Response:', errText);
+      throw new Error(`Groq API responded with ${response.status}: ${errText}`);
     }
-    
-    const data = JSON.parse(jsonMatch[0]);
-    console.log('Extracted data:', data);
+
+    const result = await response.json();
+    const textContent = result.choices?.[0]?.message?.content;
+    console.log('Groq Raw response:', textContent);
+
+    if (!textContent) {
+      throw new Error('Groq did not return any content.');
+    }
+
+    // Parse JSON safely
+    const data = JSON.parse(textContent.trim());
+    console.log('Successfully parsed data:', data);
 
     return res.status(200).json(data);
   } catch (error: any) {
-    console.error('AI Extraction error details:', error);
+    console.error('Groq extraction error details:', error);
     return res.status(500).json({ 
-      error: 'Échec de l\'analyse par l\'IA', 
-      details: error.message,
-      code: error.code || 'UNKNOWN_ERROR'
+      error: 'Échec de l\'analyse par l\'IA (Groq)', 
+      details: error.message 
     });
   }
 }
